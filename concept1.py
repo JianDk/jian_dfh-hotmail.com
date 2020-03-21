@@ -35,13 +35,9 @@ for item in mail_id:
     msg = email.message_from_bytes(data[0][1])
     #get subject
     msg_subject = msg['Subject']
-    print(msg_subject)
     #decode
-    print('decode')
     msg_subject = email.header.decode_header(msg_subject)
-    print(msg_subject)
     if msg_subject[0][1] != None:
-        print('decoded message')
         msg_subject = msg_subject[0][0].decode(msg_subject[0][1])
     else:
         msg_subject = msg_subject[0][0]
@@ -52,6 +48,9 @@ for item in mail_id:
         Order['mail_id'] = item
         Order['Subject'] = msg_subject
         #get person's name who placed the order
+        
+        print('try to get the body')
+        print(msg.get_payload())
 
-        print(Order)
         print('wait')
+        
