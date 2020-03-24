@@ -1,44 +1,41 @@
-from selenium  import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as ec
-import os
+import sqlite3
 
-chrome_options = Options()
-#chrome_options.headless = True
-chrome_options.add_experimental_option("detach", False)
-chrome_options.add_argument("--window-size=1920x1080")
-currentPath = os.getcwd()
-driverpath = os.path.join(currentPath, "headless_chrome", "chromedriver")
+conn = sqlite3.connect('test.db')
 
-driver = webdriver.Chrome(chrome_options = chrome_options, executable_path=driverpath)
-driver.get('https://jian-xiong-wu.myshopify.com/admin/orders/2074671710339')
-wait = WebDriverWait(driver, 30)
-wait.until(ec.visibility_of_element_located(
-    (By.XPATH, '//*[@id="body-content"]/div[1]/div[2]/div/form/button'),
-    ))
+#Check if customer table already exists
+c = conn.cursor()
 
-#Login
-elem = driver.find_element_by_xpath('//*[@id="account_email"]')
-elem.send_keys("jian_dfh@hotmail.com")
-wait.until(ec.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div/form/button'),)).click()
+c.execute('''SELECT count(name) FROM sqlite_master WHERE TYPE = 'table' AND name = "customer"''')
 
-wait.until(ec.visibility_of_element_located(
-    (By.XPATH, '//*[@id="account_password"]')
-)).send_keys("PASSport1")
-wait.until(ec.element_to_be_clickable(
-    (By.XPATH, '//*[@id="login_form"]/button'),
-)).click()
+#If the customer table does not already exists, create one
+if c.fetchone()[0] != 1:    
+    conn.execute('''CREATE TABLE customer
+    (ID INT PRIMARY KEY     NOT NULL,
+    FIRSTNAME       TEXT,
+    LASTNAME        TEXT,
+    ADDRESS         CHAR(150),
+    GPS_LATITUDE    REAL,
+    GPS_LONGITUDE  REAL,
+    ORDERNO         INT     NOT NULL
+    );''')
 
-#Locate the Delivery date and time frame
-wait.until(ec.visibility_of_element_located(
-    (By.XPATH, '//*[@id="note-attributes"]/div[2]/div[2]/div/div[3]/div'),
-))
+#Insert some data into customer table
+# conn.execute('''INSERT INTO customer (ID, FIRSTNAME, LASTNAME, ADDRESS, ORDERNO) \
+#     VALUES (1000, 'Jian Xiong', 'Wu', 'Ellemosevej 35, 2900 Hellerup', 1000);''')
 
-date = driver.find_element_by_xpath('//*[@id="note-attributes"]/div[2]/div[2]/div/div[3]/div').text
+# conn.execute('''INSERT INTO customer (ID, FIRSTNAME, LASTNAME, GPS_LATITUDE, GPS_LONGITUDE, ORDERNO, ADDRESS) \
+#     VALUES (1001, 'Min Hong', 'Mai', 22.3221, 23.2232, 1001, 'Emdrupvej 113, 3.3., 2400 København NV');''')
 
-wait.until(ec.visibility_of_element_located((By.XPATH, '//*[@id="note-attributes"]/div[2]/div[2]/div/div[4]/div'),))
-timeframe = driver.find_element_by_xpath('//*[@id="note-attributes"]/div[2]/div[2]/div/div[4]/div').text
-print(date, timeframe, sep = '---')
+# conn.execute('''UPDATE customer SET GPS_LATITUDE = 23.2232, GPS_LONGITUDE = 213.2321 WHERE ID =1000''')
+
+# conn.commit()
+
+# conn.close()
+
+#Check if a order no already exists in the data base
+conn = sqlite3.connect('test.db')
+c = conn.cursor()
+c.execute('''SELECT ORDERNO FROM customer WHERE ORDERNO = 1000''')
+for item in c.fetchall():
+    print(item)
+

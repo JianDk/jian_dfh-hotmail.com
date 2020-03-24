@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 import os
+import database_manager as dbman
 
 class orderFromEmail:
     def __init__(self, **kwargs):
@@ -15,6 +16,11 @@ class orderFromEmail:
         self.host = kwargs['host']
         self.port = kwargs['port']
         self.password = kwargs['password']
+
+        #Assure that the sqlite3 data base exists 
+        if os.path.exists('orderDB.db') is False:
+            dbman.createDB('orderDB.db')
+
     
     def EmailConnect(self):
         #Perform both the conenction and the user login
@@ -28,7 +34,7 @@ class orderFromEmail:
         '''
         self.connection.select(folderName)
 
-    def searchOrderEmail(self, emailFrom):
+    def searchOrderEmail(self, emailFrom, **kwargs):
         #Get today's date stamp
         today = datetime.datetime.today()
         today = today.strftime('%d-%b-%Y')
@@ -119,8 +125,6 @@ class orderFromEmail:
                         newOrder['ExecutionTime'] = timestamp
              
             OrderList.append(newOrder)
-        print(OrderList)
-
         self.logoutClose()
 
     def deliveryTimeStamp(self, https_link):
