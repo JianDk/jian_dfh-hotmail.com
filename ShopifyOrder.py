@@ -16,11 +16,11 @@ class orderFromEmail:
         self.host = kwargs['host']
         self.port = kwargs['port']
         self.password = kwargs['password']
+        self.dbName = 'orderDB.db'
 
         #Assure that the sqlite3 data base exists 
-        if os.path.exists('orderDB.db') is False:
-            dbman.createDB('orderDB.db')
-
+        if os.path.exists(self.dbName) is False:
+            dbman.createDB(self.dbName)
     
     def EmailConnect(self):
         #Perform both the conenction and the user login
@@ -35,6 +35,15 @@ class orderFromEmail:
         self.connection.select(folderName)
 
     def searchOrderEmail(self, emailFrom, **kwargs):
+        '''
+        looks into kontakt@dimsum.dk for new emails from shopify containing the order. The order
+        number is compared against current existing numbers in data base. If the order number does 
+        not currently exists, it will be inserted into the data. The delivery date and time is found
+        through browser automation into the shopify account. 
+        '''
+        #Look into the sqlite data base and look for existing orders
+        orderno_db = dbman.get_existingOrderNo(self.dbName)
+        
         #Get today's date stamp
         today = datetime.datetime.today()
         today = today.strftime('%d-%b-%Y')
@@ -84,6 +93,11 @@ class orderFromEmail:
             #Look for the selective tag in the subject field that is specific for a order email
             if '[Hidden Dimsum Delivery Take Away] Order #' in msg_subject:
                 orderno, guestName = self.get_SubjectInfo(msg_subject)
+
+                #If orderno already exists, no need to do browser automation
+                if int(orderno) in orderno_db:
+                    continue
+
                 newOrder = dict()
                 newOrder['ShopifyOrderNo'] = orderno
                 newOrder['guestName'] = guestName
@@ -126,6 +140,7 @@ class orderFromEmail:
              
             OrderList.append(newOrder)
         self.logoutClose()
+        return OrderList
 
     def deliveryTimeStamp(self, https_link):
         '''
@@ -134,7 +149,7 @@ class orderFromEmail:
 
         chrome_options = Options()
         chrome_options.headless = True
-        chrome_options.add_experimental_option("detach", True)
+        #chrome_options.add_experimental_option("detach", False)
         chrome_options.add_argument("--window-size=1920x1080")
         currentPath = os.getcwd()
         driverpath = os.path.join(currentPath, "headless_chrome", "chromedriver")
@@ -275,4 +290,6 @@ class orderFromEmail:
 order = orderFromEmail(email = 'kontakt@dimsum.dk', host = 'imap.gigahost.dk', password = 'DimSum2018', port = 993)
 order.EmailConnect()
 order.EmailFolderSelect(folderName = 'INBOX')
-order.searchOrderEmail('kontakt@dimsum.dk')
+orderList = order.searchOrderEmail('kontakt@dimsum.dk')
+print(orderList)
+dbman.insert_orderList_to_DB('orderDB.db', orderList)
