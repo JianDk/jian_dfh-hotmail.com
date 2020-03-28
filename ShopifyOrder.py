@@ -19,6 +19,14 @@ class orderFromEmail:
         self.password = kwargs['password']
         self.dbName = 'orderDB.db'
 
+        #check which account we log into
+        if kwargs['account'] == 'HK':
+            self.Shopify_user = 'alexanderystore@gmail.com'
+            self.Shopify_password = 'ale0099Y'
+        elif kwargs['account'] == 'DK':
+            self.Shopify_user = 'jian_dfh@hotmail.com'
+            self.Shopify_password = 'PASSport1'
+
         #Assure that the sqlite3 data base exists 
         if os.path.exists(self.dbName) is False:
             dbman.createDB(self.dbName)
@@ -188,12 +196,12 @@ class orderFromEmail:
 
         #Login
         elem = driver.find_element_by_xpath('//*[@id="account_email"]')
-        elem.send_keys("jian_dfh@hotmail.com")
+        elem.send_keys(self.Shopify_user)
         wait.until(ec.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div/form/button'),)).click()
 
         wait.until(ec.visibility_of_element_located(
             (By.XPATH, '//*[@id="account_password"]')
-        )).send_keys("PASSport1")
+        )).send_keys(self.Shopify_password)
         wait.until(ec.element_to_be_clickable(
             (By.XPATH, '//*[@id="login_form"]/button'),
         )).click()
@@ -311,7 +319,8 @@ class orderFromEmail:
         self.connection.logout()
 
 
-order = orderFromEmail(email = 'kontakt@dimsum.dk', host = 'imap.gigahost.dk', password = 'DimSum2018', port = 993)
+order = orderFromEmail(email = 'kontakt@dimsum.dk', host = 'imap.gigahost.dk', password = 'DimSum2018', port = 993,
+account = 'HK')
 order.EmailConnect()
 order.EmailFolderSelect(folderName = 'INBOX')
 orderList = order.searchOrderEmail('alexanderydesign@gmail.com')
