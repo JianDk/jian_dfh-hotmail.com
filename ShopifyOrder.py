@@ -21,7 +21,7 @@ class orderFromEmail:
 
         #check which account we log into
         if kwargs['account'] == 'HK':
-            self.Shopify_user = 'alexanderystore@gmail.com'
+            self.Shopify_user = 'alexanderydesign@gmail.com'
             self.Shopify_password = 'ale0099Y'
         elif kwargs['account'] == 'DK':
             self.Shopify_user = 'jian_dfh@hotmail.com'
