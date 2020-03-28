@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 import os
 import database_manager as dbman
+import requests
 
 class orderFromEmail:
     def __init__(self, **kwargs):
@@ -48,7 +49,7 @@ class orderFromEmail:
         today = datetime.datetime.today()
         today = today.strftime('%d-%b-%Y')
 
-        today = '21-Mar-2020' # FIXME: FOR TESTING ONLY REMEMBER TO REMOVE
+        today = '28-Mar-2020' # FIXME: FOR TESTING ONLY REMEMBER TO REMOVE
 
         #Perform a filter to search for all the emails from emailFrom from the date starting from today
         result, mailid_from = self.connection.search(None, f'(FROM "{emailFrom}")')
@@ -60,6 +61,7 @@ class orderFromEmail:
         
         #There exists emails from the sender. Check if any emails received from today
         result, mailid_since = self.connection.search(None, f'(SINCE "{today}")')
+        
         if result != 'OK':
             print(f'Email from {emailFrom} exists, but none of these emails are from today!')
             self.logoutClose()
@@ -69,10 +71,10 @@ class orderFromEmail:
         mailid_from = mailid_from[0].split()
         mailid_since = mailid_since[0].split()
         mail_id = set(mailid_from).intersection(set(mailid_since))
-
+        
         #Fetch the emails from the common mail id in a loop. Note, the filter so far only searched for sender from today. Still need to assure that the mail type is a order mail
         OrderList = list()
-
+        
         for mailid in mail_id:
             #Get email data
             result, data = self.connection.fetch(mailid, '(RFC822)')
@@ -91,7 +93,7 @@ class orderFromEmail:
                 msg_subject = msg_subject[0][0]
             
             #Look for the selective tag in the subject field that is specific for a order email
-            if '[Hidden Dimsum Delivery Take Away] Order #' in msg_subject:
+            if '[Hidden Dimsum] Order #' in msg_subject:
                 orderno, guestName = self.get_SubjectInfo(msg_subject)
 
                 #If orderno already exists, no need to do browser automation
@@ -124,6 +126,10 @@ class orderFromEmail:
                         if deliveryMethod == 'Delivery':
                             addrStreet, city = self.get_address(bodyText)
                             newOrder['deliverAddress'] = addrStreet + ', ' + city
+                            #get geo location latitude and longitude
+                            latitude, longitude = self.get_geoCoordinates(newOrder['deliverAddress'])
+                            newOrder['latitude'] = latitude
+                            newOrder['longitude'] = longitude
                     
                         #Get contact information being either phone or email
                         contact = self.get_contactMethod(bodyText)
@@ -142,13 +148,31 @@ class orderFromEmail:
         self.logoutClose()
         return OrderList
 
+    def get_geoCoordinates(self, address):
+        api_key="AIzaSyCmczCD01h-5DpcaV3TLtg9bneSro8arDE"
+
+        url = f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}'
+        data = requests.get(url = url)
+        if data.status_code != 200:
+            print('place not existent')
+
+        data = data.json()
+        if data['status'] != 'OK': #Address could not be located
+            latitude = ''
+            longitude = ''
+        else:
+            latitude = data['results'][0]['geometry']['location']['lat']
+            longitude = data['results'][0]['geometry']['location']['lng']
+        return latitude, longitude
+
+
     def deliveryTimeStamp(self, https_link):
         '''
         Runs selenium in headless mode to obtain the date and time stamp for either pickup or delivery
         '''
 
         chrome_options = Options()
-        chrome_options.headless = True
+        chrome_options.headless = False
         #chrome_options.add_experimental_option("detach", False)
         chrome_options.add_argument("--window-size=1920x1080")
         currentPath = os.getcwd()
@@ -290,6 +314,6 @@ class orderFromEmail:
 order = orderFromEmail(email = 'kontakt@dimsum.dk', host = 'imap.gigahost.dk', password = 'DimSum2018', port = 993)
 order.EmailConnect()
 order.EmailFolderSelect(folderName = 'INBOX')
-orderList = order.searchOrderEmail('kontakt@dimsum.dk')
+orderList = order.searchOrderEmail('alexanderydesign@gmail.com')
 print(orderList)
 dbman.insert_orderList_to_DB('orderDB.db', orderList)

@@ -45,8 +45,9 @@ def insert_orderList_to_DB(path_db, orderList):
         #check if deliverAddress exists
         if 'deliverAddress' in item:
             mystr = f'''INSERT INTO customer \
-            (ORDERNO, NAME, ADDRESS, CONTACT) \
-            VALUES ({int(item['ShopifyOrderNo'])}, '{item['guestName']}', '{item['deliverAddress']}', '{item['contact']}');'''
+            (ORDERNO, NAME, ADDRESS, CONTACT, GPS_LATITUDE, GPS_LONGITUDE) \
+            VALUES ({int(item['ShopifyOrderNo'])}, '{item['guestName']}', '{item['deliverAddress']}', '{item['contact']}', \
+            {item['latitude']}, {item['longitude']});'''
         else:
             mystr = f'''INSERT INTO customer \
             (ORDERNO, NAME, CONTACT) VALUES ({int(item['ShopifyOrderNo'])}, '{item['guestName']}', '{item['contact']}');'''
