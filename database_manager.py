@@ -91,5 +91,15 @@ def get_existingOrderNo(path_db):
     orderno = [i[0] for i in orderno]
     return orderno
 
+def chkTableExists(path_db, tablename):
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    c.execute(f'''SELECT name FROM sqlite_master WHERE type='table' AND name='{tablename}' ''')
+    data = c.fetchall()
+    if not data:
+        return False
+    else:
+        return True
+
 
    

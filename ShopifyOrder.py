@@ -33,6 +33,18 @@ class orderFromEmail:
         #Assure that the sqlite3 data base exists 
         if os.path.exists(self.dbName) is False:
             dbman.createDB(self.dbName)
+        
+        #Even though the path exists, it doesn't mean that table exists. Do a check. If not exists, create it
+        status = dbman.chkTableExists(self.dbName, 'customer')
+        if status is False:
+            dbman.createDB(self.dbName)
+        status = dbman.chkTableExists(self.dbName, 'items')
+        if status is False:
+            dbman.createDB(self.dbName)
+        status = dbman.chkTableExists(self.dbName, 'order_execution')
+        if status is False:
+            dbman.createDB(self.dbName)
+        
     
     def EmailConnect(self):
         #Perform both the conenction and the user login
@@ -55,12 +67,11 @@ class orderFromEmail:
         '''
         #Look into the sqlite data base and look for existing orders
         orderno_db = dbman.get_existingOrderNo(self.dbName)
+        print(orderno_db)
         
         #Get today's date stamp
         today = datetime.datetime.today()
         today = today.strftime('%d-%b-%Y')
-
-        #today = '28-Mar-2020' # FIXME: FOR TESTING ONLY REMEMBER TO REMOVE
 
         #Perform a filter to search for all the emails from emailFrom from the date starting from today
         result, mailid_from = self.connection.search(None, f'(FROM "{emailFrom}")')
@@ -87,6 +98,7 @@ class orderFromEmail:
         OrderList = list()
         
         for mailid in mail_id:
+
             #Get email data
             result, data = self.connection.fetch(mailid, '(RFC822)')
 
@@ -108,9 +120,10 @@ class orderFromEmail:
                 orderno, guestName = self.get_SubjectInfo(msg_subject)
 
                 #If orderno already exists, no need to do browser automation
-                if int(orderno) in orderno_db:
-                    continue
-
+                #if int(orderno) in orderno_db:
+                 #   continue
+                
+            if not orderno_db: #then all orders are new orders
                 newOrder = dict()
                 newOrder['ShopifyOrderNo'] = orderno
                 newOrder['guestName'] = guestName
@@ -155,7 +168,63 @@ class orderFromEmail:
                         newOrder['ExecutionDate'] = date
                         newOrder['ExecutionTime'] = timestamp
              
-            OrderList.append(newOrder)
+                OrderList.append(newOrder)
+
+            elif int(orderno) in orderno_db:
+                print('orderno exists, skip')
+                print('order no', orderno, sep = '---') 
+                time.sleep(10)
+                continue
+
+            elif int(orderno) not in orderno_db:
+                print(' a new order found!')
+                print(orderno)
+                time.sleep(10)
+                newOrder = dict()
+                newOrder['ShopifyOrderNo'] = orderno
+                newOrder['guestName'] = guestName
+
+                #Extract email body information
+                for part in msg.walk():
+                    if part.get_content_type() == 'text/plain':
+                        bodyText = part.get_payload(decode = True)
+                        bodyText = bytes.decode(bodyText, encoding='utf-8')
+                        #Get item related information
+                        itemName, amount, price = self.get_itemInfo(bodyText)
+                        newOrder['itemName'] = itemName
+                        newOrder['amount'] = [int(i) for i in amount]
+                        tmp = list()
+                        for i in price:
+                            tmp.append(float(i.replace(',','.')))
+                            newOrder['price'] = tmp
+
+                        #Get delivery method
+                        deliveryMethod = self.get_deliveryMethod(bodyText)
+                        newOrder['deliveryMethod'] = deliveryMethod
+
+                        #Get address if delivery
+                        if deliveryMethod == 'Delivery':
+                            addrStreet, city = self.get_address(bodyText)
+                            newOrder['deliverAddress'] = addrStreet + ', ' + city
+                            #get geo location latitude and longitude
+                            latitude, longitude = self.get_geoCoordinates(newOrder['deliverAddress'])
+                            newOrder['latitude'] = latitude
+                            newOrder['longitude'] = longitude
+                    
+                        #Get contact information being either phone or email
+                        contact = self.get_contactMethod(bodyText)
+                        newOrder['contact'] = contact
+                    
+                        #Get the order link
+                        self.get_orderLink(bodyText)
+                        newOrder['orderLink'] = self.get_orderLink(bodyText)
+
+                        #Do a browswer automation to get delivery date and time
+                        date, timestamp = self.deliveryTimeStamp(newOrder['orderLink'])
+                        newOrder['ExecutionDate'] = date
+                        newOrder['ExecutionTime'] = timestamp
+                OrderList.append(newOrder)
+
         self.logoutClose()
         return OrderList
 
@@ -183,7 +252,7 @@ class orderFromEmail:
         '''
 
         chrome_options = Options()
-        chrome_options.headless = False
+        chrome_options.headless = True
         #chrome_options.add_experimental_option("detach", False)
         chrome_options.add_argument("--window-size=1920x1080")
         currentPath = os.getcwd()
