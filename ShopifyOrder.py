@@ -223,6 +223,7 @@ class orderFromEmail:
                         date, timestamp = self.deliveryTimeStamp(newOrder['orderLink'])
                         newOrder['ExecutionDate'] = date
                         newOrder['ExecutionTime'] = timestamp
+                
                 OrderList.append(newOrder)
 
         self.logoutClose()
