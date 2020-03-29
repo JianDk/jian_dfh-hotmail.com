@@ -10,6 +10,9 @@ from selenium.webdriver.support import expected_conditions as ec
 import os
 import database_manager as dbman
 import requests
+from Geoplotter import GeoPlotter 
+import threading
+import time
 
 class orderFromEmail:
     def __init__(self, **kwargs):
@@ -57,7 +60,7 @@ class orderFromEmail:
         today = datetime.datetime.today()
         today = today.strftime('%d-%b-%Y')
 
-        today = '28-Mar-2020' # FIXME: FOR TESTING ONLY REMEMBER TO REMOVE
+        #today = '28-Mar-2020' # FIXME: FOR TESTING ONLY REMEMBER TO REMOVE
 
         #Perform a filter to search for all the emails from emailFrom from the date starting from today
         result, mailid_from = self.connection.search(None, f'(FROM "{emailFrom}")')
@@ -318,11 +321,38 @@ class orderFromEmail:
         self.connection.close()
         self.connection.logout()
 
+def plotOrder():
+    '''
+    continuely plot the marker
+    '''
+    while True:
+        gp = GeoPlotter(home_latitude = 55.677063, home_longitude = 12.573435, radius = 11000, dbpath = 'orderDB.db')
+        print(datetime.datetime.now(), 'geo data checked and plotted')
+        time.sleep(5)
 
-order = orderFromEmail(email = 'kontakt@dimsum.dk', host = 'imap.gigahost.dk', password = 'DimSum2018', port = 993,
-account = 'HK')
-order.EmailConnect()
-order.EmailFolderSelect(folderName = 'INBOX')
-orderList = order.searchOrderEmail('alexanderydesign@gmail.com')
-print(orderList)
-dbman.insert_orderList_to_DB('orderDB.db', orderList)
+def orderManager():
+    '''
+    Overall loop for the work flow
+    '''
+    while True:
+
+        order = orderFromEmail(email = 'kontakt@dimsum.dk', host = 'imap.gigahost.dk', password = 'DimSum2018', port = 993,
+        account = 'HK')
+        
+        #Connect to email    
+        order.EmailConnect()
+        order.EmailFolderSelect(folderName = 'INBOX')
+        orderList = order.searchOrderEmail('alexanderydesign@gmail.com')
+        
+        #If new order exists, insert it
+        if orderList:
+            dbman.insert_orderList_to_DB('orderDB.db', orderList)
+        
+        print('New incoming order checked at', datetime.datetime.now(), sep = ' : ')
+        time.sleep(5)
+
+#Upon starting the program, a thread is started to allow continously plotting 
+x = threading.Thread(target= plotOrder)
+x.start() #Fire away this thread
+
+orderManager()
