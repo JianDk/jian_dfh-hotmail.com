@@ -13,10 +13,19 @@ class GeoPlotter:
         today_date = datetime.datetime.today().date()
 
         #Connect to the data base
+        
         conn = sqlite3.connect(dbpath)
         c = conn.cursor()
         mystr = '''SELECT ORDERNO, ORDER_TYPE, DATE, TIME FROM order_execution'''
-        c.execute(mystr)
+        try:
+            c.execute(mystr)
+        except:
+            self.m = self.map_init(home_lat = self.home_latitude, home_lng = self.home_longitude, radius = self.deliveryRadius)
+            self.m.save('DeliveryMap.html')
+            print('database does not yet exists')
+
+            return
+
         data = c.fetchall()
         conn.close()
 

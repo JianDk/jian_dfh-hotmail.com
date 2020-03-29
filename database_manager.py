@@ -81,7 +81,11 @@ def insert_orderList_to_DB(path_db, orderList):
 def get_existingOrderNo(path_db):
     conn = sqlite3.Connection(path_db)
     c = conn.cursor()
-    c = c.execute('''SELECT ORDERNO FROM order_execution''')
+    try:
+        c = c.execute('''SELECT ORDERNO FROM order_execution''')
+    except:
+        print('get_existingOrderNo data base cannot select orderno from data base')
+        return
     orderno = c.fetchall()
     conn.close()
     orderno = [i[0] for i in orderno]
