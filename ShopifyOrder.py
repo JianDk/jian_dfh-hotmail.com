@@ -330,7 +330,7 @@ def plotOrder():
         print(datetime.datetime.now(), 'geo data checked and plotted')
         time.sleep(5)
 
-def orderManager():
+def execute():
     '''
     Overall loop for the work flow
     '''
@@ -354,4 +354,4 @@ def orderManager():
 #Upon starting the program, a thread is started to allow continously plotting 
 x = threading.Thread(target= plotOrder)
 x.start() #Fire away this thread
-orderManager()
+execute()
