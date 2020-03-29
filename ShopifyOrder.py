@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as ec
 import os
 import database_manager as dbman
 import requests
-from Geoplotter import GeoPlotter 
+import GeoPlotter 
 import threading
 import time
 
@@ -326,7 +326,7 @@ def plotOrder():
     continuely plot the marker
     '''
     while True:
-        gp = GeoPlotter(home_latitude = 55.677063, home_longitude = 12.573435, radius = 11000, dbpath = 'orderDB.db')
+        GeoPlotter.GeoPlotter(home_latitude = 55.677063, home_longitude = 12.573435, radius = 11000, dbpath = 'orderDB.db')
         print(datetime.datetime.now(), 'geo data checked and plotted')
         time.sleep(5)
 
@@ -349,10 +349,9 @@ def orderManager():
             dbman.insert_orderList_to_DB('orderDB.db', orderList)
         
         print('New incoming order checked at', datetime.datetime.now(), sep = ' : ')
-        time.sleep(5)
+        time.sleep(30)
 
 #Upon starting the program, a thread is started to allow continously plotting 
 x = threading.Thread(target= plotOrder)
 x.start() #Fire away this thread
-
 orderManager()

@@ -2,7 +2,7 @@ import sqlite3
 import datetime
 import folium
 
-class GeoPlotter():
+class GeoPlotter:
     def __init__(self, **kwargs):
         dbpath = kwargs['dbpath']
         self.home_latitude = kwargs['home_latitude']
