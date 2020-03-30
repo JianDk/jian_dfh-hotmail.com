@@ -13,6 +13,7 @@ import requests
 import GeoPlotter 
 import threading
 import time
+from printOrder import printOrder
 
 class orderFromEmail:
     def __init__(self, **kwargs):
@@ -400,6 +401,13 @@ def plotOrder():
         print(datetime.datetime.now(), 'geo data checked and plotted')
         time.sleep(10)
 
+def print_Order():
+    while True:
+        print('check for printing')
+        printerParam = {"printerNear": {"connectionMethod": "usb", "printerDriverName": "XP-58C"}}
+        printOrder('orderDB.db', printerParam['printerNear'])
+        time.sleep(10)
+
 def execute():
     '''
     Overall loop for the work flow
@@ -422,6 +430,10 @@ def execute():
         time.sleep(60)
 
 #Upon starting the program, a thread is started to allow continously plotting 
-x = threading.Thread(target= plotOrder)
-x.start() #Fire away this thread
+plotTask = threading.Thread(target= plotOrder)
+plotTask.start() #Fire away this thread
+
+printTask = threading.Thread(target = printOrder)
+printTask.start()
+
 execute()

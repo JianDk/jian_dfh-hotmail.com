@@ -91,6 +91,16 @@ def get_existingOrderNo(path_db):
     orderno = [i[0] for i in orderno]
     return orderno
 
+def get_customer(path_db, orderno):
+    '''returns all customer information from the customer table '''
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = f'''SELECT * FROM customer WHERE ORDERNO = {orderno}'''
+    c.execute(mystr)
+    customer = c.fetchone()
+    conn.close()
+    return customer
+
 def chkTableExists(path_db, tablename):
     conn = sqlite3.Connection(path_db)
     c = conn.cursor()
@@ -101,5 +111,12 @@ def chkTableExists(path_db, tablename):
     else:
         return True
 
-
+def setPrintedStatus(path_db, orderno, status):
+    '''sets the order_execution table the printed status to either yes or no, depending on the status string. order is the orderno'''
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = 'UPDATE order_execution SET PRINT_STATUS = ? WHERE ORDERNO = ?'
+    c.execute(mystr, (status, orderno))
+    conn.commit()
+    conn.close()
    
