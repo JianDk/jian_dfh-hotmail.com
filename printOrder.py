@@ -1,8 +1,10 @@
 import sqlite3
 import datetime
+from ShopifyPrinter_win10 import Printer as printer
+import database_manager as dbman
 
 class printOrder:
-    def __init__(self, dbpath):
+    def __init__(self, dbpath, printerParam):
         #Connect to the data base
         conn = sqlite3.Connection(dbpath)
         c = conn.cursor()
@@ -35,24 +37,35 @@ class printOrder:
                 now = datetime.datetime.now()
 
                 if now >= executionStart:
-                    print('should be printed')
                     printdict =  dict()
                     printdict['deliveryType'] = item[1]
                     printdict['executionTime'] = item[3]
                     printdict['orderno'] = item[0]
+
                     #Get items in the order
                     conn = sqlite3.Connection(dbpath)
                     c = conn.cursor()
                     mystr = f'''SELECT ITEM, AMOUNT, UNIT_PRICE, ORDERNO FROM items WHERE ORDERNO = {printdict['orderno']} '''
                     c.execute(mystr)
                     data2 = c.fetchall()
-                    print(data2)
-                    #connect to printer and print
-                    
-                    print('write back to data base for print yes')
-                    print(item)
-                
+                    printdict['items'] = data2
 
-        
-    
-printOrder('orderDB.db')
+                    #Get customer information
+                    customer = dbman.get_customer(dbpath, printdict['orderno'])
+                    print(customer)
+                    printdict['name'] = customer[1]
+                    printdict['address'] = customer[2]
+                    printdict['contact'] = customer[3]
+                    printdict['latitude'] = customer[4]
+                    printdict['longitude'] = customer[5]
+                    
+                    #connect to printer and print twice one to kitchen and one to host 
+                    p = printer(printerParam)
+                    p.printDelivery(printdict)
+                    p = printer(printerParam)
+                    p.printDelivery(printdict)
+                    
+                    #After printing, the printed status in data base will be switched to 'yes'
+                    dbman.setPrintedStatus(dbpath, printdict['orderno'], 'yes')
+
+                    
