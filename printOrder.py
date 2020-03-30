@@ -60,9 +60,9 @@ class printOrder:
                     printdict['longitude'] = customer[5]
                     
                     #connect to printer and print twice one to kitchen and one to host 
-                    p = printer(printerParam)
+                    p = printer(printerParam['printerNear'])
                     p.printDelivery(printdict)
-                    p = printer(printerParam)
+                    p = printer(printerParam['printerFar'])
                     p.printDelivery(printdict)
                     
                     #After printing, the printed status in data base will be switched to 'yes'

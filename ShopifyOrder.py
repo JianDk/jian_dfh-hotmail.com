@@ -307,7 +307,6 @@ class orderFromEmail:
                 item = item[1 : -2].strip()
                 return item
 
-
     def get_contactMethod(self, bodyText):
         textsplit = bodyText.splitlines()
         #The contact information is in the last time
@@ -409,8 +408,9 @@ def plotOrder():
 def print_Order():
     while True:
         print('check for printing')
-        printerParam = {"printerNear": {"connectionMethod": "usb", "printerDriverName": "EPSON TM-T20II Receipt"}}
-        printOrder('orderDB.db', printerParam['printerNear'])
+        printerParam = {"printerNear": {"connectionMethod": "usb", "printerDriverName": "EPSON TM-T20II Receipt"},
+        "printerFar": {"connectionMethod": "network", "host": "192.168.1.50", "port": 9100}}
+        printOrder('orderDB.db', printerParam)
         time.sleep(10)
 
 def execute():
