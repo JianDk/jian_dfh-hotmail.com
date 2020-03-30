@@ -37,3 +37,16 @@ wait.until(ec.visibility_of_element_located(
 )).click()
 
 #input password
+wait.until(ec.visibility_of_element_located(
+    (By.XPATH, '//*[@id="account_password"]'),
+)).send_keys("PASSport1")
+time.sleep(2)
+
+wait.until(ec.visibility_of_element_located(
+    (By.XPATH, '//*[@id="login_form"]/button'),
+)).click()
+
+#Click on product
+wait.until(ec.visibility_of_element_located(
+    (By.XPATH,'//*[@id="AppFrameNav"]/nav/div[2]/ul[1]/li[3]/div/a/span'),
+)).click()
