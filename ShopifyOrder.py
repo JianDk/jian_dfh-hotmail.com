@@ -398,7 +398,7 @@ def plotOrder():
     while True:
         GeoPlotter.GeoPlotter(home_latitude = 55.677063, home_longitude = 12.573435, radius = 11000, dbpath = 'orderDB.db')
         print(datetime.datetime.now(), 'geo data checked and plotted')
-        time.sleep(5)
+        time.sleep(10)
 
 def execute():
     '''
@@ -419,7 +419,7 @@ def execute():
             dbman.insert_orderList_to_DB('orderDB.db', orderList)
         
         print('New incoming order checked at', datetime.datetime.now(), sep = ' : ')
-        time.sleep(30)
+        time.sleep(60)
 
 #Upon starting the program, a thread is started to allow continously plotting 
 x = threading.Thread(target= plotOrder)
