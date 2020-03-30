@@ -260,7 +260,7 @@ class orderFromEmail:
         currentPath = os.getcwd()
         driverpath = os.path.join(currentPath, "headless_chrome", "chromedriver")
 
-        driver = webdriver.Chrome(chrome_options = chrome_options, executable_path=driverpath)
+        driver = webdriver.Chrome(options = chrome_options, executable_path=driverpath)
         driver.get(https_link)
         print('browser initiated in hidden mode')
         wait = WebDriverWait(driver, 30)
