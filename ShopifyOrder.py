@@ -438,7 +438,7 @@ def execute():
 plotTask = threading.Thread(target= plotOrder)
 plotTask.start() #Fire away this thread
 
-printTask = threading.Thread(target = printOrder)
+printTask = threading.Thread(target = print_Order)
 printTask.start()
 
 execute()

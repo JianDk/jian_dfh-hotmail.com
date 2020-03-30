@@ -32,7 +32,7 @@ class printOrder:
                 
                 start = datetime.datetime.strptime(startstr, timeformat)
                 
-                executionStart = start - datetime.timedelta(minutes=30)
+                executionStart = start - datetime.timedelta(minutes=60)
 
                 now = datetime.datetime.now()
 
