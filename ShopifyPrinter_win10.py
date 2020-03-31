@@ -53,7 +53,7 @@ class Printer:
         escpos1.cut()
         self._printout(escpos1.raw)
     
-    def printDelivery(self, printdict):
+    def printDelivery(self, printdict, translation):
         escpos1 = escpos()
         escpos1.align('center')
         escpos1.bold('on')
@@ -68,7 +68,13 @@ class Printer:
         escpos1.newline(3)
         #Print out items
         for item in printdict['items']:
-            escpos1.text(item[0] + ' x ' + str(item[1]))
+            #Check translation 
+            if item[0] in translation:
+                itemstr = translation[item[0]]
+            else:
+                itemstr = item[0]
+
+            escpos1.text(itemstr + ' x ' + str(item[1]))
             escpos1.newline(1)
         escpos1.cut()
         self._printout(escpos1.raw)

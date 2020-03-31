@@ -2,9 +2,15 @@ import sqlite3
 import datetime
 from ShopifyPrinter_win10 import Printer as printer
 import database_manager as dbman
+import json
 
 class printOrder:
     def __init__(self, dbpath, printerParam):
+
+        #Get translation dict
+        with open('Shopify_item2print.txt') as f:
+            translation = json.load(f)
+
         #Connect to the data base
         conn = sqlite3.Connection(dbpath)
         c = conn.cursor()
@@ -61,9 +67,9 @@ class printOrder:
                     
                     #connect to printer and print twice one to kitchen and one to host 
                     p = printer(printerParam['printerNear'])
-                    p.printDelivery(printdict)
+                    p.printDelivery(printdict, translation)
                     p = printer(printerParam['printerFar'])
-                    p.printDelivery(printdict)
+                    p.printDelivery(printdict, translation)
                     
                     #After printing, the printed status in data base will be switched to 'yes'
                     dbman.setPrintedStatus(dbpath, printdict['orderno'], 'yes')

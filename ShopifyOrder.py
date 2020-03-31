@@ -14,6 +14,7 @@ import GeoPlotter
 import threading
 import time
 from printOrder import printOrder
+import json
 
 class orderFromEmail:
     def __init__(self, **kwargs):
@@ -410,6 +411,7 @@ def print_Order():
         print('check for printing')
         printerParam = {"printerNear": {"connectionMethod": "usb", "printerDriverName": "EPSON TM-T20II Receipt"},
         "printerFar": {"connectionMethod": "network", "host": "192.168.1.50", "port": 9100}}
+        
         printOrder('orderDB.db', printerParam)
         time.sleep(10)
 
