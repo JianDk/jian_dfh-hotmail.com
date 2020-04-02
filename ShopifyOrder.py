@@ -110,6 +110,8 @@ class orderFromEmail:
             msg_subject = msg['Subject']
 
             #decode
+            print('goes wrong here all the time')
+            print(msg_subject)
             msg_subject = email.header.decode_header(msg_subject)
 
             if msg_subject[0][1] != None:
@@ -175,13 +177,11 @@ class orderFromEmail:
             elif int(orderno) in orderno_db:
                 print('orderno exists, skip')
                 print('order no', orderno, sep = '---') 
-                time.sleep(10)
                 continue
 
             elif int(orderno) not in orderno_db:
                 print(' a new order found!')
                 print(orderno)
-                time.sleep(10)
                 newOrder = dict()
                 newOrder['ShopifyOrderNo'] = orderno
                 newOrder['guestName'] = guestName
