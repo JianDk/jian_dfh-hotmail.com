@@ -45,6 +45,7 @@ class GeoPlotter:
                 tmp = item[2].split('-')
                 start_str = str(today_date) + ' ' + tmp[0].strip()
                 start = datetime.datetime.strptime(start_str, timeformat) 
+                print(tmp)
                 end_str = str(today_date) + ' ' + tmp[1].strip()
                 end = datetime.datetime.strptime(end_str, timeformat)
 
