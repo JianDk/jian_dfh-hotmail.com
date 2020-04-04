@@ -69,14 +69,18 @@ class orderFromEmail:
         '''
         #Look into the sqlite data base and look for existing orders
         orderno_db = dbman.get_existingOrderNo(self.dbName)
-        print(orderno_db)
         
         #Get today's date stamp
         today = datetime.datetime.today()
         today = today.strftime('%d-%b-%Y')
 
         #Perform a filter to search for all the emails from emailFrom from the date starting from today
-        result, mailid_from = self.connection.search(None, f'(FROM "{emailFrom}")')
+        try:
+            result, mailid_from = self.connection.search(None, f'(FROM "{emailFrom}")')
+        except:
+            print('something went wrong on connection to emailFrom. Restarted script')
+            OrderList =  list()
+            return OrderList
 
         if result != 'OK':
             print(f'No incoming emails from {emailFrom}')
@@ -84,8 +88,12 @@ class orderFromEmail:
             return
         
         #There exists emails from the sender. Check if any emails received from today
-        result, mailid_since = self.connection.search(None, f'(SINCE "{today}")')
-        
+        try:
+            result, mailid_since = self.connection.search(None, f'(SINCE "{today}")')
+        except:
+            OrderList = list()
+            return OrderList
+
         if result != 'OK':
             print(f'Email from {emailFrom} exists, but none of these emails are from today!')
             self.logoutClose()
@@ -102,7 +110,11 @@ class orderFromEmail:
         for mailid in mail_id:
 
             #Get email data
-            result, data = self.connection.fetch(mailid, '(RFC822)')
+            try:
+                result, data = self.connection.fetch(mailid, '(RFC822)')
+            except:
+                OrderList = list()
+                return OrderList
 
             msg = email.message_from_bytes(data[0][1])
 
@@ -122,10 +134,6 @@ class orderFromEmail:
             #Look for the selective tag in the subject field that is specific for a order email
             if '[Hidden Dimsum] Order #' in msg_subject:
                 orderno, guestName = self.get_SubjectInfo(msg_subject)
-
-                #If orderno already exists, no need to do browser automation
-                #if int(orderno) in orderno_db:
-                 #   continue
                 
             if not orderno_db: #then all orders are new orders
                 newOrder = dict()
