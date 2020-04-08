@@ -28,10 +28,7 @@ class printOrder:
         #if there is something we need to print now
         if data2:
             for item in data2:
-                printdict =  dict()
-                printdict['deliveryType'] = item[1]
-                printdict['executionTime'] = item[3]
-                printdict['orderno'] = item[0]
+                printdict = self.add_executionInfo_to_Printdict(item)
 
                 #Get items in the order
                 conn = sqlite3.Connection(dbpath)
@@ -43,12 +40,7 @@ class printOrder:
 
                 #Get customer information
                 customer = dbman.get_customer(dbpath, printdict['orderno'])
-                print(customer)
-                printdict['name'] = customer[1]
-                printdict['address'] = customer[2]
-                printdict['contact'] = customer[3]
-                printdict['latitude'] = customer[4]
-                printdict['longitude'] = customer[5]
+                printdict = self.add_customerInfo_to_printdict(customer, printdict)
                 
                 #connect to printer and print twice one to kitchen and one to host 
                 p = printer(printerParam['printerNear'])
@@ -82,10 +74,7 @@ class printOrder:
                 now = datetime.datetime.now()
 
                 if now >= executionStart:
-                    printdict =  dict()
-                    printdict['deliveryType'] = item[1]
-                    printdict['executionTime'] = item[3]
-                    printdict['orderno'] = item[0]
+                    printdict =  self.add_executionInfo_to_Printdict(item)
 
                     #Get items in the order
                     conn = sqlite3.Connection(dbpath)
@@ -97,12 +86,7 @@ class printOrder:
 
                     #Get customer information
                     customer = dbman.get_customer(dbpath, printdict['orderno'])
-                    print(customer)
-                    printdict['name'] = customer[1]
-                    printdict['address'] = customer[2]
-                    printdict['contact'] = customer[3]
-                    printdict['latitude'] = customer[4]
-                    printdict['longitude'] = customer[5]
+                    printdict = self.add_customerInfo_to_printdict(customer, printdict)
                     
                     #connect to printer and print twice one to kitchen and one to host 
                     p = printer(printerParam['printerNear'])
@@ -113,7 +97,23 @@ class printOrder:
                     #After printing, the printed status in data base will be switched to 'yes'
                     dbman.setPrintedStatus(dbpath, printdict['orderno'], 'yes')
 
-    def addItems_to_Printdict(self, orderno, printdict):
-        pass
+    def add_executionInfo_to_Printdict(self, item):
+        '''
+        adds execution table information from the sql to print dict
+        '''
+        printdict =  dict()
+        printdict['deliveryType'] = item[1]
+        printdict['executionTime'] = item[3]
+        printdict['orderno'] = item[0]
+        return printdict
+
+    def add_customerInfo_to_printdict(self, customer, printdict):
+        printdict['name'] = customer[1]
+        printdict['address'] = customer[2]
+        printdict['contact'] = customer[3]
+        printdict['latitude'] = customer[4]
+        printdict['longitude'] = customer[5]
+        return printdict
+        
 
                     
