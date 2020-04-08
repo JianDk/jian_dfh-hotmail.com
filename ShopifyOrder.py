@@ -405,6 +405,8 @@ class orderFromEmail:
         self.connection.close()
         self.connection.logout()
 
+
+
 def plotOrder():
     '''
     continuely plot the marker
