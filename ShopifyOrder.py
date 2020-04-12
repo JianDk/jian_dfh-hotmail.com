@@ -13,6 +13,7 @@ import requests
 import GeoPlotter 
 import threading
 import time
+from datetime import timedelta
 from printOrder import printOrder
 import json
 
@@ -50,7 +51,6 @@ class orderFromEmail:
     
     def EmailConnect(self):
         #Perform both the conenction and the user login
-        #con = imaplib.IMAP4_SSL(host = "imap.gigahost.dk", port = 993)
         self.connection = imaplib.IMAP4_SSL(host = self.host, port = self.port)
         self.connection.login(user = self.email, password = self.password)
 
@@ -70,8 +70,9 @@ class orderFromEmail:
         #Look into the sqlite data base and look for existing orders
         orderno_db = dbman.get_existingOrderNo(self.dbName)
         
-        #Get today's date stamp
-        today = datetime.datetime.today()
+        #Get today's date stamp. One day is subtracted from today to remove the error of server time issue when
+        #Checking emails. All emails received from yesterday to now are checked. 
+        today = datetime.datetime.today() - timedelta(days=1)
         today = today.strftime('%d-%b-%Y')
 
         #Perform a filter to search for all the emails from emailFrom from the date starting from today
@@ -122,8 +123,6 @@ class orderFromEmail:
             msg_subject = msg['Subject']
 
             #decode
-            print('goes wrong here all the time')
-            print(msg_subject)
             msg_subject = email.header.decode_header(msg_subject)
 
             if msg_subject[0][1] != None:
@@ -434,10 +433,17 @@ def execute():
         order = orderFromEmail(email = 'kontakt@dimsum.dk', host = 'imap.gigahost.dk', password = 'DimSum2018', port = 993,
         account = 'HK')
         
-        #Connect to email    
+        #Connect to email first to INBOX
         order.EmailConnect()
         order.EmailFolderSelect(folderName = 'INBOX')
         orderList = order.searchOrderEmail('alexanderydesign@gmail.com')
+
+        #Check if mails are caught in JUNK
+        order.EmailConnect()
+        print('look into junk')
+        order.EmailFolderSelect(folderName = 'JUNK')
+        orderListJunk = order.searchOrderEmail('alexanderydesign@gmail.com')
+        orderList.extend(orderListJunk)
         
         #If new order exists, insert it
         if orderList:
