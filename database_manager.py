@@ -26,12 +26,13 @@ def createDB(path_db):
 
     conn.execute('''CREATE TABLE order_execution
     (ORDERNO INT PRIMARY KEY     NOT NULL,
+    NAME            TEXT        NOT NULL,
     ORDER_TYPE      TEXT       NOT NULL,
     DATE            TEXT        NOT NULL,
     TIME            TEXT       NOT NULL,
     PRINT_STATUS    TEXT       NOT NULL,
     ORDER_DELIVERED TEXT        NOT NULL,
-    PAYMENT_RECEIVED TEXT       NOT NULL)''')
+    PAYMENT_CAPTURED TEXT       NOT NULL)''')
 
     conn.commit()
     conn.close()
@@ -102,14 +103,18 @@ def get_customer(path_db, orderno):
     return customer
 
 def chkTableExists(path_db, tablename):
+    '''
+    Even though the data base exists, it doesn't mean that tables in data base are created. This method takes
+    database path as path_db str and tablename as list of table names, and checks for existence of tablename. 
+    If table name does not exists, the entire data base table will be created.
+    '''
     conn = sqlite3.Connection(path_db)
     c = conn.cursor()
-    c.execute(f'''SELECT name FROM sqlite_master WHERE type='table' AND name='{tablename}' ''')
-    data = c.fetchall()
-    if not data:
-        return False
-    else:
-        return True
+    for item in tablename:
+        c.execute(f'''SELECT name FROM sqlite_master WHERE type='table' AND name='{item}' ''')
+        data = c.fetchall()
+        if not data:
+            createDB(path_db)
 
 def setPrintedStatus(path_db, orderno, status):
     '''sets the order_execution table the printed status to either yes or no, depending on the status string. order is the orderno'''
