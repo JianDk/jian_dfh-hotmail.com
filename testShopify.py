@@ -55,10 +55,6 @@ resp = requests.get(payout_url)
 resp = resp.json()
 currentMonthPayout = list()
 
-for item in resp['payouts']:
-    print(item)
-    print('\n')
-
 #Current month
 current_month = datetime.datetime.now().month
 date = '2020-04-06'
@@ -66,3 +62,15 @@ date = datetime.datetime.strptime(date, "%Y-%m-%d")
 if current_month == date.month:
     print('yes')
 print(date.month)
+
+#Get a report list
+order_url = shop_url + "/orders.json"
+resp1 = requests.get(url = order_url, params = {'test' : False, 'fulfillment_status' : 'any', 'status' : 'closed', 'limit' : 50})
+link = resp1.headers['Link'].split('page_info=')
+link = link[1].split('>;')[0]
+resp2 = requests.get(url = order_url + '?page_info=' + link + '&limit=50')
+
+#get balance
+balance_url = shop_url + "/shopify_payments/balance.json"
+resp3 = requests.get(url = balance_url)
+print(resp3.json())
