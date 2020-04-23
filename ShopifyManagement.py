@@ -2,6 +2,8 @@ import datetime
 import logging
 import requests
 from calendar import monthrange
+import os
+import database_manager as dbman
 
 class ManageOrder:
     def __init__(self, **kwargs):
@@ -21,6 +23,10 @@ class ManageOrder:
         
         #DEfine conversion rate from HKD to DKK
         self.conversion_HKD_DKK = 0.89
+
+        #Assure that the sqlite3 data base exists 
+        if os.path.exists(self.databasePath) is False:
+            dbman.createDB(self.databasePath)
     
     def incomeStatus(self, switch):
         '''
@@ -109,6 +115,75 @@ class ManageOrder:
                 status = True
                 return status, account_switch
     
+    def getOrders(self, **kwargs):
+        '''
+        Query Shopify for orders. Returns a list of orders. **kwargs: orderType = 'open' query Shopify for new orders not yet 
+        fulfilled. orderType = 'closed' query Shopify for closed orders.
+        '''
+        order_url = self.shop_url + "/orders.json"
+        if kwargs['orderType'] == 'open':
+            created_at = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+            pay_load = {'test' : False,
+            'created_at_max' : created_at,
+            'status' : 'open',
+            'limit' : 250} #Will not implement the look for next page, as usually there will never be more than 50 new orders a day
+
+            resp = requests.get(url = order_url, params = pay_load)
+            if 'link' in resp.headers:
+                print('True')
+
+            if resp.status_code != 200:
+                self.logging('debug', 'Failed to request for open orders from getOrders')
+                status = False
+                orders = False
+                return status, orders
+            
+            orders = resp.json()['orders']
+            status = True
+            return status, orders
+        
+        if kwargs['orderType'] == 'closed':
+            pay_load = {'test' : False,
+            'limit' : 250,
+            'status' : 'closed'}
+            
+            resp = requests.get(url = order_url, params = pay_load)
+            if resp.status_code != 200:
+                self.logging('debug', 'Failed to request closed orders')
+                status = False
+                orders = False
+                return status, orders
+            orders = resp.json()['orders']
+            #Check for additional pages, if exists keep querying
+            in_loop = True
+            while in_loop:
+                #If next page exists, retrieve it
+                if 'link' in resp.headers and 'rel="next' in resp.headers['link']:
+                    #Obtain the new link for next page
+                    link = resp.headers['Link'].split('page_info=')
+                    link = link[1].split('>;')[0]
+                    next_page_order_url = order_url + '?page_info=' + link + '&limit=250'
+                    resp = requests.get(url = next_page_order_url)
+                    
+                    if resp.status_code != 200:
+                        self.logging('debug', 'failed to retrieve closed orders in next page')
+                        status = False
+                        orders = False
+                        return status, orders
+                    
+                    #Append the new orders into the existing ones from previous pages
+                    for item in resp.json()['orders']:
+                        orders.append(item)
+                
+                else:
+                    in_loop = False
+                    status = True 
+                    return status, orders
+    
+    def insert_orders_to_database(self, orders):
+        #Send to database_manager for order insertion
+        dbman.insert_orders_to_database(self.databasePath, orders)
+        
     def logging(self, level, message):
         #Instantiate logging
         logging.basicConfig(filename = 'log.txt', 
@@ -129,9 +204,12 @@ class ManageOrder:
         
         if level == 'critical':
             logging.critical(message)
-            
+
 
 mo = ManageOrder(switch = 'HK')
-status, amount = mo.incomeStatus(switch = 'DK')
-status, account_switch = mo.account_switch_decision(maxIncome = 500000)
-print(account_switch)
+#status, amount = mo.incomeStatus(switch = 'DK')
+#status, account_switch = mo.account_switch_decision(maxIncome = 500000)
+status, orders = mo.getOrders(orderType = 'closed')
+mo.insert_orders_to_database(orders)
+status, orders = mo.getOrders(orderType = 'open')
+mo.insert_orders_to_database(orders)
