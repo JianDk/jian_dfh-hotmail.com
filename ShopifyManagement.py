@@ -115,6 +115,78 @@ class ManageOrder:
                 status = True
                 return status, account_switch
     
+    def fulfill_and_capture(self, **kwargs):
+        #Get order_id from unfulfilled orders
+        data = dbman.get_incomplete_orders(self.databasePath)
+        if not data:
+            return
+        
+        #Loop over the unfulfilled orders and decide if it should be fulfilled
+        for item in data:
+            if item[-1].strip() == 'now':
+                #Order should be closed and payment captured
+                status = self.fulfill_order(item[1])
+                
+                print(status)
+
+    def fulfill_order(self, order_id):
+
+        #Start by retrieving the specific order
+        order_url = self.shop_url + f"/orders/{order_id}.json"
+        resp = requests.get(order_url)
+        if resp.status_code != 200:
+            self.logging('debug', 'Failed to retrieve order from fulfill_and_capture')
+            status = False
+            return status
+        
+        #Obtain the line_items where the variant_id is stored
+        line_items = resp.json()['order']['line_items']
+
+        #Obtain inventory_item_id for each variant id
+        line_items_id = list()
+        for i in line_items:
+            line_items_id.append({'id' : str(i['id'])})
+
+            url_inventory_item_id = self.shop_url + f"/variants/{i['variant_id']}.json"
+            resp_inventory_ítem_id = requests.get(url = url_inventory_item_id)  
+
+            if resp_inventory_ítem_id.status_code != 200:
+                status = False
+                self.logging('debug', 'Failed to retrieve inventory item id for variant id ' + i['variant_id'])
+                return status
+            
+            inventory_item_id = resp_inventory_ítem_id.json()['variant']['inventory_item_id']
+            
+            #Get the location id
+            url_location_id = self.shop_url + f"/inventory_levels.json?inventory_item_ids={inventory_item_id}"
+            resp_location_id = requests.get(url = url_location_id)
+            if resp_location_id.status_code != 200:
+                status = False
+                self.logging('debug', 'Failed to retrieve location id for inventory item id ' + str(inventory_item_id))
+                return status
+
+            location_id = resp_location_id.json()['inventory_levels'][0]['location_id']
+
+        #Build the post payload for order fulfillment
+        postbody = dict()
+        postbody['fulfillment'] = dict()
+        postbody['fulfillment']['location_id'] = location_id
+        postbody['fulfillment']['tracking_number'] = ''
+        postbody['fulfillment']['line_items'] = list()
+        postbody['fulfillment']['line_items'] = line_items_id
+        
+        #post fulfillment
+        url_fulfillment = self.shop_url + f"/orders/{order_id}/fulfillments.json"
+        resp_post_fulfillment = requests.post(url = url_fulfillment, json = postbody)
+            
+        if resp_post_fulfillment.status_code != 200 and resp_post_fulfillment.status_code != 201:
+            self.logging('debug', 'post fulfillment failed status code ' + str(resp_post_fulfillment.status_code))
+            status = False
+            return status
+        
+        status = True
+        return status
+
     def getOrders(self, **kwargs):
         '''
         Query Shopify for orders. Returns a list of orders. **kwargs: orderType = 'open' query Shopify for new orders not yet 
@@ -207,9 +279,12 @@ class ManageOrder:
 
 
 mo = ManageOrder(switch = 'HK')
-#status, amount = mo.incomeStatus(switch = 'DK')
+status, amount = mo.incomeStatus(switch = 'HK')
+print(amount)
 #status, account_switch = mo.account_switch_decision(maxIncome = 500000)
 status, orders = mo.getOrders(orderType = 'closed')
 mo.insert_orders_to_database(orders)
 status, orders = mo.getOrders(orderType = 'open')
 mo.insert_orders_to_database(orders)
+#get a list of incomplete orders
+mo.fulfill_and_capture()

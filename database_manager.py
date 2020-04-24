@@ -106,6 +106,18 @@ def get_customer(path_db, orderno):
     conn.close()
     return customer
 
+def get_incomplete_orders(path_db):
+    '''
+    Get a list of orderno and shopify order id that are not yet fulfilled and closed
+    '''
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = '''SELECT ORDERNO, ID, ORDER_TYPE, DATE, TIME, FULFILL_AND_CLOSE \
+        FROM order_execution WHERE FULFILL_AND_CLOSE = 'no' OR FULFILL_AND_CLOSE = 'now' '''
+    c.execute(mystr)
+    data = c.fetchall()
+    return data
+
 def insert_orders_to_database(path_db, orders):
     conn = sqlite3.Connection(path_db)
     c = conn.cursor()
