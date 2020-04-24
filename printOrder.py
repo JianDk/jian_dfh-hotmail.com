@@ -6,7 +6,6 @@ import json
 
 class printOrder:
     def __init__(self, dbpath, printerParam):
-
         #Get translation dict
         with open('Shopify_item2print.txt') as f:
             translation = json.load(f)

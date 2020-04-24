@@ -184,7 +184,6 @@ class ManageOrder:
         
         #Loop over the unfulfilled orders and decide if it should be fulfilled
         for item in data:
-            print(item)
             if item[-1].strip() == 'now':
                 #Order should be closed and payment captured
                 status_fulfill = self.fulfill_order(item[1])
@@ -220,8 +219,6 @@ class ManageOrder:
                         else:
                             dbman.set_fulfill_payment_capture_to_yes(self.databasePath, item[0])
 
-
-
     def fulfill_order(self, order_id):
         '''
         Given the order id a request is made to Shopify to fulfill the order
@@ -241,13 +238,12 @@ class ManageOrder:
         line_items_id = list()
         for i in line_items:
             line_items_id.append({'id' : str(i['id'])})
-
             url_inventory_item_id = self.shop_url + f"/variants/{i['variant_id']}.json"
             resp_inventory_ítem_id = requests.get(url = url_inventory_item_id)  
 
             if resp_inventory_ítem_id.status_code != 200:
                 status = False
-                self.logging('debug', 'Failed to retrieve inventory item id for variant id ' + i['variant_id'])
+                self.logging('debug', 'Failed to retrieve inventory item id for variant id ' + str(i['variant_id']))
                 return status
             
             inventory_item_id = resp_inventory_ítem_id.json()['variant']['inventory_item_id']
@@ -255,6 +251,7 @@ class ManageOrder:
             #Get the location id
             url_location_id = self.shop_url + f"/inventory_levels.json?inventory_item_ids={inventory_item_id}"
             resp_location_id = requests.get(url = url_location_id)
+
             if resp_location_id.status_code != 200:
                 status = False
                 self.logging('debug', 'Failed to retrieve location id for inventory item id ' + str(inventory_item_id))
@@ -269,11 +266,13 @@ class ManageOrder:
         postbody['fulfillment']['tracking_number'] = ''
         postbody['fulfillment']['line_items'] = list()
         postbody['fulfillment']['line_items'] = line_items_id
-        
+        print('here is post body')
+        print(postbody)        
         #post fulfillment
         url_fulfillment = self.shop_url + f"/orders/{order_id}/fulfillments.json"
         resp_post_fulfillment = requests.post(url = url_fulfillment, json = postbody)
-            
+        print('resp from post')
+        print(resp_post_fulfillment.status_code)
         if resp_post_fulfillment.status_code != 200 and resp_post_fulfillment.status_code != 201 and resp_post_fulfillment.status_code != 422:
             self.logging('debug', 'post fulfillment failed status code ' + str(resp_post_fulfillment.status_code))
             status = False
@@ -350,6 +349,10 @@ class ManageOrder:
     def insert_orders_to_database(self, orders):
         #Send to database_manager for order insertion
         dbman.insert_orders_to_database(self.databasePath, orders)
+    
+    def print_orders(self):
+        #Query orders from the data base
+        pass
         
     def logging(self, level, message):
         #Instantiate logging
@@ -371,7 +374,6 @@ class ManageOrder:
         
         if level == 'critical':
             logging.critical(message)
-
 
 mo = ManageOrder(switch = 'DK')
 status, amount = mo.incomeStatus(switch = 'DK')
