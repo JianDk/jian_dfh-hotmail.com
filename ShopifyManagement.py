@@ -114,7 +114,68 @@ class ManageOrder:
                 account_switch = 'DK'
                 status = True
                 return status, account_switch
+
+    def capture_transaction(self, order_id):
+        #Retrieves a list of transactions associated with the order
+        url_transaction = self.shop_url + f"/orders/{order_id}/transactions.json"
+        resp = requests.get(url = url_transaction)
+        if resp.status_code != 200:
+            self.logging('debug','Failed to retrieve order id ' + str(order_id) + ' for capture payment (url_transaction)')
+            status = False
+            return status
+
+        #Get currency and amount
+        currency = resp.json()['transactions'][0]['currency']
+        amount = resp.json()['transactions'][0]['amount']
+        #Post for capture
+        postbody = dict()
+        postbody['transaction'] = dict()
+        postbody['transaction']['currency'] = currency
+        postbody['transaction']['amount'] = amount
+        postbody['transaction']['kind'] = "capture"
+        url_capture_payment = self.shop_url + f"/orders/{order_id}/transactions.json"
+        resp = requests.post(url = url_capture_payment, json = postbody)
+        if resp.status_code != 201 and resp.status_code != 422:
+            self.logging('debug', 'post payment capture status code ' + str(resp.status_code))
+            status = False
+            return status
+
+        status = True
+        return status
+
+    def convert_pickup_datetime(self, datestr, timestr):
+        '''
+        convert shopify pickup date and time to datetime format
+        '''
+        datestr = datestr + '-' + timestr
+        timeformat = '%d/%m/%Y-%H:%M'
+        date_and_time = datetime.datetime.strptime(datestr, timeformat)
+        return date_and_time
     
+    def convert_delivery_datetime(self, datestr, timestr, option):
+        '''
+        convert shopify delivery date and time to datetime format
+        datestr is given as e.g. 23/04/2020 
+        timestr is given as e.g. 6:30 PM - 7:30 PM
+        option can either be start_time or end_time provided as string. If start time, the datetime will be formed by using 
+        6:30 PM as start time as in this example. If end_time datetime will be formed using 7:30 PM as in this example.
+        '''
+        #Split the time to start time and end time
+        timestr = timestr.split('-')
+        start_time = timestr[0].strip()
+        end_time = timestr[1].strip()
+        
+        timeformat = '%d/%m/%Y-%I:%M %p'
+        if option == 'start_time':
+            timestr = datestr + '-' + start_time
+            date_and_time = datetime.datetime.strptime(timestr, timeformat)
+        
+        if option == 'end_time':
+            timestr = datestr + '-' + end_time
+            date_and_time = datetime.datetime.strptime(timestr, timeformat)
+
+        return date_and_time            
+        
     def fulfill_and_capture(self, **kwargs):
         #Get order_id from unfulfilled orders
         data = dbman.get_incomplete_orders(self.databasePath)
@@ -123,14 +184,48 @@ class ManageOrder:
         
         #Loop over the unfulfilled orders and decide if it should be fulfilled
         for item in data:
+            print(item)
             if item[-1].strip() == 'now':
                 #Order should be closed and payment captured
-                status = self.fulfill_order(item[1])
+                status_fulfill = self.fulfill_order(item[1])
+                status_payment_capture = self.capture_transaction(item[1])
+                if status_fulfill is False or status_payment_capture is False:
+                    continue
+                else: #update the data base with FULFILL_PAYMENT_CAPTURE to yes
+                    dbman.set_fulfill_payment_capture_to_yes(self.databasePath, item[0])
+            
+            if item[-1].strip() == 'no':
+                #Get current time
+                now = datetime.datetime.now()
+                #Check delivery type and convert the time 
+                if item[2] == 'pickup':
+                    date_and_time = self.convert_pickup_datetime(item[3], item[4])
+                    if now > date_and_time + datetime.timedelta(minutes=60):
+                        #After one hour from execution time, pickup will be closed
+                        status_fulfill = self.fulfill_order(item[1])
+                        status_payment_capture = self.capture_transaction(item[1])
+                        if status_fulfill is False or status_payment_capture is False:
+                            self.logging('debug', 'Problem with fulfill or capture payment for item ' + str(item[0]))
+                        else:
+                            dbman.set_fulfill_payment_capture_to_yes(self.databasePath, item[0])
                 
-                print(status)
+                if item[2] == 'delivery':
+                    date_and_time = self.convert_delivery_datetime(item[3], item[4], 'end_time')
+                    if now > date_and_time + datetime.timedelta(minutes=60):
+                        #After one hour from end_time the order will be closed
+                        status_fulfill = self.fulfill_order(item[1])
+                        status_payment_capture = self.capture_transaction(item[1])
+                        if status_fulfill is False or status_payment_capture is False:
+                            self.logging('debug', 'Problem with fulfill or capture payment for item ' + str(item[0]))
+                        else:
+                            dbman.set_fulfill_payment_capture_to_yes(self.databasePath, item[0])
+
+
 
     def fulfill_order(self, order_id):
-
+        '''
+        Given the order id a request is made to Shopify to fulfill the order
+        '''
         #Start by retrieving the specific order
         order_url = self.shop_url + f"/orders/{order_id}.json"
         resp = requests.get(order_url)
@@ -179,7 +274,7 @@ class ManageOrder:
         url_fulfillment = self.shop_url + f"/orders/{order_id}/fulfillments.json"
         resp_post_fulfillment = requests.post(url = url_fulfillment, json = postbody)
             
-        if resp_post_fulfillment.status_code != 200 and resp_post_fulfillment.status_code != 201:
+        if resp_post_fulfillment.status_code != 200 and resp_post_fulfillment.status_code != 201 and resp_post_fulfillment.status_code != 422:
             self.logging('debug', 'post fulfillment failed status code ' + str(resp_post_fulfillment.status_code))
             status = False
             return status
@@ -278,8 +373,8 @@ class ManageOrder:
             logging.critical(message)
 
 
-mo = ManageOrder(switch = 'HK')
-status, amount = mo.incomeStatus(switch = 'HK')
+mo = ManageOrder(switch = 'DK')
+status, amount = mo.incomeStatus(switch = 'DK')
 print(amount)
 #status, account_switch = mo.account_switch_decision(maxIncome = 500000)
 status, orders = mo.getOrders(orderType = 'closed')

@@ -118,6 +118,14 @@ def get_incomplete_orders(path_db):
     data = c.fetchall()
     return data
 
+def set_fulfill_payment_capture_to_yes(path_db, orderno):
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = '''UPDATE order_execution SET FULFILL_AND_CLOSE = ? WHERE ORDERNO = ?'''
+    c.execute(mystr, ("yes", orderno))
+    conn.commit()
+    conn.close()
+
 def insert_orders_to_database(path_db, orders):
     conn = sqlite3.Connection(path_db)
     c = conn.cursor()
