@@ -77,8 +77,23 @@ def get_printable_orderno(path_db):
     '''
     conn = sqlite3.Connection(path_db)
     c = conn.cursor()
-    mystr = '''SELECT  '''
-    c.execute()
+    mystr = '''SELECT * FROM order_execution WHERE PRINT_STATUS = 'no' '''
+    c.execute(mystr)
+    printable_orderno = c.fetchall()
+    conn.close()
+    return printable_orderno
+
+def get_orderItems(path_db, orderno):
+    '''
+    Query data base for items and amount based on path to data base and orderno 
+    '''
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = f'''SELECT ITEM, AMOUNT FROM items WHERE ORDERNO = {orderno} '''
+    c.execute(mystr)
+    items = c.fetchall()
+    conn.close()
+    return items 
 
 
 def insert_orders_to_database(path_db, orders):

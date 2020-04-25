@@ -4,6 +4,7 @@ import requests
 from calendar import monthrange
 import os
 import database_manager as dbman
+#from ShopifyPrinter_win10 import Printer
 
 class ManageOrder:
     def __init__(self, **kwargs):
@@ -23,6 +24,18 @@ class ManageOrder:
         
         #DEfine conversion rate from HKD to DKK
         self.conversion_HKD_DKK = 0.89
+
+        #Define printer parameter
+        self.printerParam = dict()
+        self.printerParam['printerNear'] = {'connectionMethod' : 'usb',
+        'printerDriverName' : "EPSON TM-T20II Receipt"
+        }
+        self.printerParam['printerFar'] = {}
+        self.printerParam['printerFar'] = {
+            'connectionMethod' : 'network',
+            'host' : '192.168.1.50',
+            'port' : 9100
+        }
 
         #Assure that the sqlite3 data base exists 
         if os.path.exists(self.databasePath) is False:
@@ -266,13 +279,10 @@ class ManageOrder:
         postbody['fulfillment']['tracking_number'] = ''
         postbody['fulfillment']['line_items'] = list()
         postbody['fulfillment']['line_items'] = line_items_id
-        print('here is post body')
-        print(postbody)        
+
         #post fulfillment
         url_fulfillment = self.shop_url + f"/orders/{order_id}/fulfillments.json"
         resp_post_fulfillment = requests.post(url = url_fulfillment, json = postbody)
-        print('resp from post')
-        print(resp_post_fulfillment.status_code)
         if resp_post_fulfillment.status_code != 200 and resp_post_fulfillment.status_code != 201 and resp_post_fulfillment.status_code != 422:
             self.logging('debug', 'post fulfillment failed status code ' + str(resp_post_fulfillment.status_code))
             status = False
@@ -295,8 +305,6 @@ class ManageOrder:
             'limit' : 250} #Will not implement the look for next page, as usually there will never be more than 50 new orders a day
 
             resp = requests.get(url = order_url, params = pay_load)
-            if 'link' in resp.headers:
-                print('True')
 
             if resp.status_code != 200:
                 self.logging('debug', 'Failed to request for open orders from getOrders')
@@ -352,7 +360,25 @@ class ManageOrder:
     
     def print_orders(self):
         #Query orders from the data base
-        pass
+        printable_orderno = dbman.get_printable_orderno(self.databasePath)
+        for item in printable_orderno: #These items are printable order, but still there is a need to check if we are within time frame for print
+            now = datetime.datetime.now()
+            if item[3] == 'delivery':
+                execution_time = self.convert_delivery_datetime(item[4], item[5], 'start_time') 
+                execution_time = execution_time - datetime.timedelta(minutes=60)
+                if now >= execution_time:
+                    #Get customer information
+                    customer_info = dbman.get_customer(self.databasePath, item[0])
+                    #Get items that was ordered by customer
+                    order_items = dbman.get_orderItems(self.databasePath, item[0])
+
+                    #Send print to packer
+                    #Instantiate the printer first
+                    #printer = Printer(self.printerParam['printerNear'])
+                    print(customer_info)
+                    print(order_items)
+                    print('\n')
+
         
     def logging(self, level, message):
         #Instantiate logging
@@ -379,9 +405,10 @@ mo = ManageOrder(switch = 'DK')
 status, amount = mo.incomeStatus(switch = 'DK')
 print(amount)
 #status, account_switch = mo.account_switch_decision(maxIncome = 500000)
-status, orders = mo.getOrders(orderType = 'closed')
-mo.insert_orders_to_database(orders)
+#status, orders = mo.getOrders(orderType = 'closed')
+#mo.insert_orders_to_database(orders)
 status, orders = mo.getOrders(orderType = 'open')
 mo.insert_orders_to_database(orders)
 #get a list of incomplete orders
 mo.fulfill_and_capture()
+mo.print_orders()
