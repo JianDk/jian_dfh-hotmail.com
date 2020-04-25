@@ -52,6 +52,73 @@ class Printer:
         escpos1.newline(3)
         escpos1.cut()
         self._printout(escpos1.raw)
+
+    def printOrder_packer(self, orderexecution, customer, order_items, print_translation):
+        escpos1 = escpos()
+        escpos1.charSize(2,2)
+        escpos1.align('center')
+        escpos1.text(orderexecution[3]) #order type delivery or pickup
+        escpos1.text(str(orderexecution[0])) #order no
+        escpos1.text(orderexecution[4]) #Date for delivery
+        escpos1.text(orderexecution[5]) #Time frame for delivery
+        escpos1.newline(1)
+        escpos1.text(orderexecution[2]) #Customer name
+        escpos1.newline(1)
+        #We will need a delay warning here
+
+        escpos1.align('left')
+        escpos1.charSize(1,1)
+        escpos1.text('Customer note ')
+        escpos1.text(orderexecution[-1]) #customer note
+        escpos1.newline(2)
+        #Print the items
+        escpos1.charSize(2,2)
+        for item in order_items:
+            #try to see if a translation exists
+            if item[0] in print_translation:
+                dish = print_translation[item[0]]
+            else:
+                dish = item[0]
+
+            if item[1] == 1:
+                    escpos1.text(dish)
+            else:
+                escpos1.text(dish + ' ' + 'X' + ' ' + str(item[1]))
+
+        escpos1.newline(3)
+        escpos1.cut()
+        self._printout(escpos1.raw)
+    
+    def printOrder_kitchen(self, orderexecution, customer, order_items, print_translation):
+        escpos1 = escpos()
+        escpos1.charSize(2,2)
+        escpos1.align('center')
+        escpos1.text(orderexecution[3]) #order type or delivery or pickup
+        escpos1.text(str(orderexecution[0])) #order no
+        escpos1.text(orderexecution[4]) #Date for delivery
+        escpos1.text(orderexecution[5]) #Time frame for delivery
+        escpos1.newline(1)
+        escpos1.text(orderexecution[2]) #Customer name
+        escpos1.newline(2)
+        #We will need a delay warning here
+
+        #Print the items
+        escpos1.charSize(2,2)
+        for item in order_items:
+            #try to see if a translation exists
+            if item[0] in print_translation:
+                dish = print_translation[item[0]]
+            else:
+                dish = item[0]
+
+            if item[1] == 1:
+                    escpos1.text(dish)
+            else:
+                escpos1.text(dish + ' ' + 'X' + ' ' + str(item[1]))
+
+        escpos1.newline(3)
+        escpos1.cut()
+        self._printout(escpos1.raw)
     
     def printDelivery(self, printdict, translation):
         escpos1 = escpos()

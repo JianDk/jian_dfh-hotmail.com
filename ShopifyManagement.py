@@ -4,7 +4,9 @@ import requests
 from calendar import monthrange
 import os
 import database_manager as dbman
-#from ShopifyPrinter_win10 import Printer
+from ShopifyPrinter_win10 import Printer
+import json
+import time
 
 class ManageOrder:
     def __init__(self, **kwargs):
@@ -36,6 +38,11 @@ class ManageOrder:
             'host' : '192.168.1.50',
             'port' : 9100
         }
+
+        #Load in the translator file for print
+        with open('Shopify_item2print.txt', 'r') as f:
+            self.print_translation = json.load(f)
+        
 
         #Assure that the sqlite3 data base exists 
         if os.path.exists(self.databasePath) is False:
@@ -374,11 +381,30 @@ class ManageOrder:
 
                     #Send print to packer
                     #Instantiate the printer first
-                    #printer = Printer(self.printerParam['printerNear'])
+                    printer = Printer(self.printerParam['printerNear'])
+                    printer.printOrder_packer(item, customer_info, order_items, self.print_translation)
+                    
+                    printer = Printer(self.printerParam['printerFar'])
+                    printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
+                    #set print status to yes in the data base
+                    dbman.setPrintedStatus(self.databasePath, item[0], 'yes')
+
+            if item[3] == 'pickup':
+                execution_time = self.convert_pickup_datetime(item[4], item[5]) 
+                execution_time = execution_time - datetime.timedelta(minutes=60)
+
+                if now >= execution_time:
+                    printer = Printer(self.printerParam['printerFar'])
+                    printer.printOrder_packer(item, customer_info, order_items, self.print_translation)
+                    
+                    printer = Printer(self.printerParam['printerFar'])
+                    printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
+                    #set print status to yes in the data base
+                    dbman.setPrintedStatus(self.databasePath, item[0], 'yes')
+                    print(item)
                     print(customer_info)
                     print(order_items)
                     print('\n')
-
         
     def logging(self, level, message):
         #Instantiate logging
@@ -401,14 +427,38 @@ class ManageOrder:
         if level == 'critical':
             logging.critical(message)
 
-mo = ManageOrder(switch = 'DK')
-status, amount = mo.incomeStatus(switch = 'DK')
-print(amount)
-#status, account_switch = mo.account_switch_decision(maxIncome = 500000)
-#status, orders = mo.getOrders(orderType = 'closed')
-#mo.insert_orders_to_database(orders)
-status, orders = mo.getOrders(orderType = 'open')
-mo.insert_orders_to_database(orders)
-#get a list of incomplete orders
-mo.fulfill_and_capture()
-mo.print_orders()
+#Upon start
+while True:
+    #Define which store to use
+    store = 'DK'
+    mo = ManageOrder(switch = store) #Instantiate the store
+    status, amount = mo.incomeStatus(switch = store) #get amount earning from this store at current month
+    print(f'Amount for this month in {store} {amount} dkk')
+    
+    #Check for existing orders for data base update - closed 
+    status, orders = mo.getOrders(orderType = 'closed')
+    mo.insert_orders_to_database(orders)
+
+    #Check for new orders for data base update - open
+    status, orders = mo.getOrders(orderType = 'open')
+    mo.insert_orders_to_database(orders)
+
+    #Print out new orders
+    mo.print_orders()
+
+    #Check for fulfillment
+    mo.fulfill_and_capture()
+    
+    time.sleep(5)
+
+# mo = ManageOrder(switch = 'DK')
+# status, amount = mo.incomeStatus(switch = 'DK')
+# print(amount)
+# #status, account_switch = mo.account_switch_decision(maxIncome = 500000)
+# #status, orders = mo.getOrders(orderType = 'closed')
+# #mo.insert_orders_to_database(orders)
+# status, orders = mo.getOrders(orderType = 'open')
+# mo.insert_orders_to_database(orders)
+# #get a list of incomplete orders
+# mo.fulfill_and_capture()
+# mo.print_orders()
