@@ -104,17 +104,24 @@ def insert_orders_to_database(path_db, orders):
         orderno = int(item['name'].split('#')[1])
 
         #Get customer information
-        customer_name = item['shipping_address']['name']
+        #customer_name = item['shipping_address']['name']
+        customer_name = item['customer']['first_name'] + ' ' + item['customer']['last_name']
         if not customer_name:
             customer_name = 'None'
         
-        phone = item['shipping_address']['phone']
+        #phone = item['shipping_address']['phone']
+        phone = item['customer']['phone']
         if not phone:
-            phone = 'None'
+            #Try to search for phone in shipping_address
+            phone = item['shipping_address']['phone']
+            if not phone:
+                phone = 'None'
 
         email = item['email']
         if not email:
-            email =  'None'
+            email = item['customer']['email']
+            if not email:
+                email =  'None'
 
         latitude = item['shipping_address']['latitude']
         if not latitude:
