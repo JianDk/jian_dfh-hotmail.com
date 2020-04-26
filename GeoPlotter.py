@@ -22,8 +22,6 @@ class GeoPlotter:
         except:
             self.m = self.map_init(home_lat = self.home_latitude, home_lng = self.home_longitude, radius = self.deliveryRadius)
             self.m.save('DeliveryMap.html')
-            print('database does not yet exists')
-
             return
 
         data = c.fetchall()

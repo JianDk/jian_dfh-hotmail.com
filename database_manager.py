@@ -1,4 +1,6 @@
 import sqlite3
+import requests
+
 def createDB(path_db):
     '''
     Setting up the sqlite3 data base table columns. Following tables will be created
@@ -83,6 +85,23 @@ def get_printable_orderno(path_db):
     conn.close()
     return printable_orderno
 
+def get_geoCoordinates(address):
+    api_key="AIzaSyCmczCD01h-5DpcaV3TLtg9bneSro8arDE"
+
+    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}'
+    data = requests.get(url = url)
+    if data.status_code != 200:
+        print('place not existent')
+
+    data = data.json()
+    if data['status'] != 'OK': #Address could not be located
+        latitude = ''
+        longitude = ''
+    else:
+        latitude = data['results'][0]['geometry']['location']['lat']
+        longitude = data['results'][0]['geometry']['location']['lng']
+    return latitude, longitude
+
 def get_orderItems(path_db, orderno):
     '''
     Query data base for items and amount based on path to data base and orderno 
@@ -94,7 +113,6 @@ def get_orderItems(path_db, orderno):
     items = c.fetchall()
     conn.close()
     return items 
-
 
 def insert_orders_to_database(path_db, orders):
     conn = sqlite3.Connection(path_db)
@@ -211,6 +229,21 @@ def insert_orders_to_database(path_db, orders):
             c = conn.cursor()
             c.execute(mystr)
             conn.commit()
+
+            #At this point check if latitude and longitude is set to 'none' in data base. If 
+            #'none', a query to Google Map is made for trying to identify the gps coordinates
+            if order_type == 'delivery':
+                mystr = f'''SELECT GPS_LATITUDE, GPS_LONGITUDE FROM customer WHERE ORDERNO = {orderno}'''
+                location_data = c.execute(mystr)
+                location_data = location_data.fetchone()
+                if location_data[0] == 'None' or location_data[1] == 'None':        
+                    latitude, longitude = get_geoCoordinates(address)
+                    #Update back into datea base
+                    mystr = f'''UPDATE  customer SET GPS_LATITUDE = {latitude}, \
+                        GPS_LONGITUDE = {longitude} WHERE ORDERNO = {orderno}'''
+
+                    c.execute(mystr)
+                    conn.commit()
             conn.close()
 
 def orderno_exists(path_db, orderno, tablename):

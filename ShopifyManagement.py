@@ -7,6 +7,7 @@ import database_manager as dbman
 from ShopifyPrinter_win10 import Printer
 import json
 import time
+import GeoPlotter
 
 class ManageOrder:
     def __init__(self, **kwargs):
@@ -298,6 +299,9 @@ class ManageOrder:
         status = True
         return status
 
+    def geo_plotter(self):
+        GeoPlotter.GeoPlotter(home_latitude = 55.677063, home_longitude = 12.573435, radius = 11000, dbpath = self.databasePath)
+
     def getOrders(self, **kwargs):
         '''
         Query Shopify for orders. Returns a list of orders. **kwargs: orderType = 'open' query Shopify for new orders not yet 
@@ -446,9 +450,13 @@ while True:
     #Print out new orders
     mo.print_orders()
 
+    #Check for sending warning SMS
+
+    #Geoplotting
+    mo.geo_plotter()
+    
     #Check for fulfillment
     mo.fulfill_and_capture()
-    
     time.sleep(5)
 
 # mo = ManageOrder(switch = 'DK')
