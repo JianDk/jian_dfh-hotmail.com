@@ -372,17 +372,19 @@ class ManageOrder:
     def print_orders(self):
         #Query orders from the data base
         printable_orderno = dbman.get_printable_orderno(self.databasePath)
+        
         for item in printable_orderno: #These items are printable order, but still there is a need to check if we are within time frame for print
             now = datetime.datetime.now()
+
+            #Get customer information
+            customer_info = dbman.get_customer(self.databasePath, item[0])
+            #Get items that was ordered by customer
+            order_items = dbman.get_orderItems(self.databasePath, item[0])
+            
             if item[3] == 'delivery':
                 execution_time = self.convert_delivery_datetime(item[4], item[5], 'start_time') 
                 execution_time = execution_time - datetime.timedelta(minutes=60)
                 if now >= execution_time:
-                    #Get customer information
-                    customer_info = dbman.get_customer(self.databasePath, item[0])
-                    #Get items that was ordered by customer
-                    order_items = dbman.get_orderItems(self.databasePath, item[0])
-
                     #Send print to packer
                     #Instantiate the printer first
                     printer = Printer(self.printerParam['printerNear'])
@@ -390,6 +392,10 @@ class ManageOrder:
                     
                     printer = Printer(self.printerParam['printerFar'])
                     printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
+                    
+                    printer = Printer(self.printerParam['printerNear'])
+                    printer.printDriver(customer_info, item)
+
                     #set print status to yes in the data base
                     dbman.setPrintedStatus(self.databasePath, item[0], 'yes')
 
@@ -405,10 +411,6 @@ class ManageOrder:
                     printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
                     #set print status to yes in the data base
                     dbman.setPrintedStatus(self.databasePath, item[0], 'yes')
-                    print(item)
-                    print(customer_info)
-                    print(order_items)
-                    print('\n')
         
     def logging(self, level, message):
         #Instantiate logging
@@ -454,7 +456,7 @@ while True:
 
     #Geoplotting
     mo.geo_plotter()
-    
+
     #Check for fulfillment
     mo.fulfill_and_capture()
     time.sleep(5)
