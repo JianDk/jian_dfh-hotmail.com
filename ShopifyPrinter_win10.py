@@ -71,7 +71,7 @@ class Printer:
         #Generate QR code and print out
         latitude = customer_info[5]
         longitude = customer_info[6]
-        qr_code = qrcode.make(f'http://www.google.com/maps/place/{latitude},{longitude}')
+        qr_code = qrcode.make(f'http://www.google.com/maps/place/{latitude},{longitude}', box_size = 5)
         qr_code.save('qr_location.png')
         escpos1.image('qr_location.png')
         escpos1.newline(3)

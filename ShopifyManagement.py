@@ -8,6 +8,7 @@ from ShopifyPrinter_win10 import Printer
 import json
 import time
 import GeoPlotter
+from twilio.rest import Client
 
 class ManageOrder:
     def __init__(self, **kwargs):
@@ -411,6 +412,44 @@ class ManageOrder:
                     printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
                     #set print status to yes in the data base
                     dbman.setPrintedStatus(self.databasePath, item[0], 'yes')
+    
+    def sms_delayWarn(self, orders):
+        #Get the new incoming orders 
+        for item in orders:
+            #Start by extracting orderno
+            orderno = item['name'].split('#')[1]
+            #Query the data base to obtain customer name, created_at, and delivery wished
+            
+            #Connect to data base and extract customer info
+            customer = dbman.get_customer(self.databasePath, orderno)
+            #Get customer order execution data
+            order_execution = dbman.get_order_execution(self.databasePath, orderno)
+
+            #Convert date and time to datetime objects for comparison
+            created_at = datetime.datetime.strptime(order_execution[6], "%Y-%m-%dT%H:%M:%S%z")
+            created_at = created_at.replace(tzinfo=None)
+
+            if order_execution[3] == 'delivery':
+                order_complete_by = self.convert_delivery_datetime(order_execution[4], order_execution[5], 'end_time')
+                created_in_advance = order_complete_by - created_at
+                print('delivery created in advance')
+                print(created_in_advance)
+
+            if order_execution[3] == 'pickup':
+                order_complete_by = self.convert_pickup_datetime(order_execution[4], order_execution[5])
+                created_in_advance = order_complete_by - created_at
+                print('pickup')
+                print(created_in_advance)
+            
+            now = datetime.datetime.now()
+            print('now')
+            print(now)
+            #Check if delay warning is sent
+            if order_execution[7] == 'no': #if delay warning hasn't been sent, evaluate the need for sending one
+
+
+                print(order_execution)
+            
         
     def logging(self, level, message):
         #Instantiate logging
@@ -443,32 +482,24 @@ while True:
     
     #Check for existing orders for data base update - closed 
     status, orders = mo.getOrders(orderType = 'closed')
-    mo.insert_orders_to_database(orders)
+    if status is True:
+        mo.insert_orders_to_database(orders)
 
     #Check for new orders for data base update - open
     status, orders = mo.getOrders(orderType = 'open')
-    mo.insert_orders_to_database(orders)
+    if status is True:
+        mo.insert_orders_to_database(orders)
 
-    #Print out new orders
-    mo.print_orders()
+        #Check for sending warning SMS
+        #mo.sms_delayWarn(orders)
+    
+        #Print out new orders
+        mo.print_orders()
 
-    #Check for sending warning SMS
-
-    #Geoplotting
-    mo.geo_plotter()
+        #Geoplotting
+        mo.geo_plotter()
 
     #Check for fulfillment
     mo.fulfill_and_capture()
     time.sleep(5)
 
-# mo = ManageOrder(switch = 'DK')
-# status, amount = mo.incomeStatus(switch = 'DK')
-# print(amount)
-# #status, account_switch = mo.account_switch_decision(maxIncome = 500000)
-# #status, orders = mo.getOrders(orderType = 'closed')
-# #mo.insert_orders_to_database(orders)
-# status, orders = mo.getOrders(orderType = 'open')
-# mo.insert_orders_to_database(orders)
-# #get a list of incomplete orders
-# mo.fulfill_and_capture()
-# mo.print_orders()

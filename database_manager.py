@@ -102,6 +102,18 @@ def get_geoCoordinates(address):
         longitude = data['results'][0]['geometry']['location']['lng']
     return latitude, longitude
 
+def get_order_execution(path_db, orderno):
+    '''
+    for a given orderno get all the columns in table order execution
+    '''
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = f'''SELECT * FROM order_execution WHERE ORDERNO = {orderno} '''
+    c.execute(mystr)
+    order_execution = c.fetchone()
+    conn.close()
+    return order_execution
+
 def get_orderItems(path_db, orderno):
     '''
     Query data base for items and amount based on path to data base and orderno 
