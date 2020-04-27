@@ -390,12 +390,12 @@ class ManageOrder:
                     #Instantiate the printer first
                     printer = Printer(self.printerParam['printerNear'])
                     printer.printOrder_packer(item, customer_info, order_items, self.print_translation)
+
+                    printer = Printer(self.printerParam['printerNear'])
+                    printer.printDriver(customer_info, item)
                     
                     printer = Printer(self.printerParam['printerFar'])
                     printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
-                    
-                    printer = Printer(self.printerParam['printerNear'])
-                    printer.printDriver(customer_info, item)
 
                     #set print status to yes in the data base
                     dbman.setPrintedStatus(self.databasePath, item[0], 'yes')
@@ -405,7 +405,7 @@ class ManageOrder:
                 execution_time = execution_time - datetime.timedelta(minutes=60)
 
                 if now >= execution_time:
-                    printer = Printer(self.printerParam['printerFar'])
+                    printer = Printer(self.printerParam['printerNear'])
                     printer.printOrder_packer(item, customer_info, order_items, self.print_translation)
                     
                     printer = Printer(self.printerParam['printerFar'])
@@ -487,6 +487,7 @@ while True:
 
     #Check for new orders for data base update - open
     status, orders = mo.getOrders(orderType = 'open')
+
     if status is True:
         mo.insert_orders_to_database(orders)
 
