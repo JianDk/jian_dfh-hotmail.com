@@ -434,22 +434,42 @@ class ManageOrder:
                 created_in_advance = order_complete_by - created_at
                 print('delivery created in advance')
                 print(created_in_advance)
+                if created_in_advance < datetime.timedelta(minutes=60):
+                    #Then the first criteria for sending a delay if order is created less than 30 min before time start is fulfilled
+                    delay_candidate = True
+                    
+                    #Check how many orders there are in time frame
+                    #self.count_order_in_timeFrame(order_execution[4], order_execution[5], 'delivery')
 
             if order_execution[3] == 'pickup':
                 order_complete_by = self.convert_pickup_datetime(order_execution[4], order_execution[5])
                 created_in_advance = order_complete_by - created_at
                 print('pickup')
                 print(created_in_advance)
+                if created_in_advance < datetime.timedelta(minutes=60):
+                    delay_candidate = True
+                    print('is delay candidate')
             
             now = datetime.datetime.now()
-            print('now')
-            print(now)
-            #Check if delay warning is sent
-            if order_execution[7] == 'no': #if delay warning hasn't been sent, evaluate the need for sending one
-
-
-                print(order_execution)
             
+            #Check if delay warning is sent
+            #Count order in this date and time frame
+            #if order_execution[7] == 'no': #if delay warning hasn't been sent, evaluate the need for sending one
+
+    def count_order_in_timeFrame(self, date, timeframe, order_type):
+        if order_type == 'delivery':
+            #Query the data base of orders within same time frame
+            import sqlite3
+            conn = sqlite3.Connection(self.databasePath)
+            c = conn.cursor()
+            mystr = f'''SELECT ORDERNO FROM order_execution WHERE DATE = {date} AND TIME = {timeframe}'''
+            c.execute(mystr)
+            data = c.fetchall()
+            print(data)
+            pass
+        #print(date)
+        #print(timeframe)
+        #print(order_type)
         
     def logging(self, level, message):
         #Instantiate logging
@@ -492,7 +512,7 @@ while True:
         mo.insert_orders_to_database(orders)
 
         #Check for sending warning SMS
-        #mo.sms_delayWarn(orders)
+        mo.sms_delayWarn(orders)
     
         #Print out new orders
         mo.print_orders()
