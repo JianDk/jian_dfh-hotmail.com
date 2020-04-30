@@ -8,6 +8,7 @@ class GeoPlotter:
         self.home_latitude = kwargs['home_latitude']
         self.home_longitude = kwargs['home_longitude']
         self.deliveryRadius = kwargs['radius']
+        self.store = kwargs['storename']
 
         #Get current date and time
         today_date = datetime.datetime.today().date()
@@ -20,7 +21,7 @@ class GeoPlotter:
             c.execute(mystr)
         except:
             self.m = self.map_init(home_lat = self.home_latitude, home_lng = self.home_longitude, radius = self.deliveryRadius)
-            self.m.save('DeliveryMap.html')
+            self.m.save('DeliveryMap_' + self.store + '.html')
             return
 
         data = c.fetchall()
@@ -87,7 +88,8 @@ class GeoPlotter:
         
         if not plotlist:
             #Generate an empty map
-            self.m.save('DeliveryMap.html')
+            
+            self.m.save('DeliveryMap_' + self.store + '.html')
 
         else: # there is something to plot in the map
             #Get latitude and longitude along with customer information
@@ -106,8 +108,8 @@ class GeoPlotter:
                 item['contact'] = data[3]
 
                 self.m = self.map_addMarker(item = item)
-
-            self.m.save('DeliveryMap.html')
+            storename = kwargs['storename']
+            self.m.save('DeliveryMap_' + self.store + '.html')
     
     def map_init(self, **kwargs):
         #Centers the map

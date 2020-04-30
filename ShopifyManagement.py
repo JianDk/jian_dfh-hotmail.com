@@ -19,12 +19,14 @@ class ManageOrder:
             self.PASSWORD = "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"
             self.shop_url = "https://%s:%s@jian-xiong-wu.myshopify.com/admin/api/%s" % (self.API_KEY, self.PASSWORD, self.API_VERSION)
             self.databasePath = 'orderDBDK.db'
+            self.store = 'DK'
 
         if kwargs['switch'] == 'HK':
             self.API_KEY = "11d1233bd98782e8967a340918334686"
             self.PASSWORD = "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"
             self.shop_url = "https://%s:%s@alexanderystore.myshopify.com/admin/api/%s" % (self.API_KEY, self.PASSWORD, self.API_VERSION)
             self.databasePath = 'orderDBHK.db'
+            self.store = 'HK'
         
         #DEfine conversion rate from HKD to DKK
         self.conversion_HKD_DKK = 0.89
@@ -301,7 +303,11 @@ class ManageOrder:
         return status
 
     def geo_plotter(self):
-        GeoPlotter.GeoPlotter(home_latitude = 55.677063, home_longitude = 12.573435, radius = 11000, dbpath = self.databasePath)
+        GeoPlotter.GeoPlotter(home_latitude = 55.677063, 
+        home_longitude = 12.573435, 
+        radius = 11000, 
+        dbpath = self.databasePath, 
+        storename = self.store)
 
     def getOrders(self, **kwargs):
         '''
@@ -462,7 +468,7 @@ class ManageOrder:
             import sqlite3
             conn = sqlite3.Connection(self.databasePath)
             c = conn.cursor()
-            mystr = f'''SELECT ORDERNO FROM order_execution WHERE DATE = {date} AND TIME = {timeframe}'''
+            mystr = f'''SELECT ORDERNO FROM order_execution WHERE DATE = {date} AND TIME = {timeframe} '''
             c.execute(mystr)
             data = c.fetchall()
             print(data)
@@ -519,6 +525,36 @@ while True:
 
         #Geoplotting
         mo.geo_plotter()
+
+    #Check for fulfillment
+    mo.fulfill_and_capture()
+
+    #Define which store to use
+    store = 'HK'
+    mohk = ManageOrder(switch = store) #Instantiate the store
+    status, amount = mohk.incomeStatus(switch = store) #get amount earning from this store at current month
+    print(f'Amount for this month in {store} {amount} dkk')
+    
+    #Check for existing orders for data base update - closed 
+    status, orders = mohk.getOrders(orderType = 'closed')
+   
+    if status is True:
+        mohk.insert_orders_to_database(orders)
+
+    #Check for new orders for data base update - open
+    status, orders = mohk.getOrders(orderType = 'open')
+
+    if status is True:
+        mohk.insert_orders_to_database(orders)
+
+        #Check for sending warning SMS
+        mohk.sms_delayWarn(orders)
+    
+        #Print out new orders
+        mohk.print_orders()
+
+        #Geoplotting
+        mohk.geo_plotter()
 
     #Check for fulfillment
     mo.fulfill_and_capture()
