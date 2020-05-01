@@ -280,7 +280,7 @@ class ManageOrder:
                 status = False
                 self.logging('debug', 'Failed to retrieve location id for inventory item id ' + str(inventory_item_id))
                 return status
-
+            
             location_id = resp_location_id.json()['inventory_levels'][0]['location_id']
 
         #Build the post payload for order fulfillment
@@ -387,7 +387,7 @@ class ManageOrder:
             customer_info = dbman.get_customer(self.databasePath, item[0])
             #Get items that was ordered by customer
             order_items = dbman.get_orderItems(self.databasePath, item[0])
-            
+
             if item[3] == 'delivery':
                 execution_time = self.convert_delivery_datetime(item[4], item[5], 'start_time') 
                 execution_time = execution_time - datetime.timedelta(minutes=60)
@@ -438,8 +438,6 @@ class ManageOrder:
             if order_execution[3] == 'delivery':
                 order_complete_by = self.convert_delivery_datetime(order_execution[4], order_execution[5], 'end_time')
                 created_in_advance = order_complete_by - created_at
-                print('delivery created in advance')
-                print(created_in_advance)
                 if created_in_advance < datetime.timedelta(minutes=60):
                     #Then the first criteria for sending a delay if order is created less than 30 min before time start is fulfilled
                     delay_candidate = True
@@ -450,11 +448,8 @@ class ManageOrder:
             if order_execution[3] == 'pickup':
                 order_complete_by = self.convert_pickup_datetime(order_execution[4], order_execution[5])
                 created_in_advance = order_complete_by - created_at
-                print('pickup')
-                print(created_in_advance)
                 if created_in_advance < datetime.timedelta(minutes=60):
                     delay_candidate = True
-                    print('is delay candidate')
             
             now = datetime.datetime.now()
             
@@ -557,6 +552,6 @@ while True:
         mohk.geo_plotter()
 
     #Check for fulfillment
-    mo.fulfill_and_capture()
+    mohk.fulfill_and_capture()
     time.sleep(5)
 
