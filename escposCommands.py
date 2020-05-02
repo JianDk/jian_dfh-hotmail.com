@@ -99,8 +99,11 @@ class escpos:
         '''
         Creates a binary from the text string
         '''
-        self.raw = self.raw + bytes(textstr, 'utf-8') + b'\n'
-
+        try:
+            self.raw = self.raw + bytes(textstr, 'cp865') + b'\n'
+        except:
+            self.raw = self.raw + bytes(textstr, 'utf-8') + b'\n'
+        
     def newline(self, n):
         '''
         newline(n) corresponds to b'\n' + b'\n' ... + b'\n' n times
