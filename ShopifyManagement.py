@@ -47,7 +47,11 @@ class ManageOrder:
         with open('Shopify_item2print.txt', 'r') as f:
             self.print_translation = json.load(f)
         
-
+        #Load sms credientials
+        
+        with open('twilio_crediential.txt') as f:
+            self.sms_cred = json.load(f)
+      
         #Assure that the sqlite3 data base exists 
         if os.path.exists(self.databasePath) is False:
             dbman.createDB(self.databasePath)
@@ -198,7 +202,18 @@ class ManageOrder:
             timestr = datestr + '-' + end_time
             date_and_time = datetime.datetime.strptime(timestr, timeformat)
 
-        return date_and_time            
+        return date_and_time         
+
+    def created_at_to_datetime(self, created_at):
+        '''
+        converts created_at to datetime object without daylight saving awareness. Input created_at 
+        as string in format "%Y-%m-%dT%H:%M:%S%z"
+        '''
+        
+        created_at = datetime.datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%S%z")
+        created_at = created_at.replace(tzinfo=None)
+        return created_at
+   
         
     def fulfill_and_capture(self, **kwargs):
         #Get order_id from unfulfilled orders
@@ -379,14 +394,39 @@ class ManageOrder:
     def print_orders(self):
         #Query orders from the data base
         printable_orderno = dbman.get_printable_orderno(self.databasePath)
-        
-        for item in printable_orderno: #These items are printable order, but still there is a need to check if we are within time frame for print
+
+        for item in printable_orderno: #These items are printable order, but still there is a need to check if we are within time frame for print            
             now = datetime.datetime.now()
 
             #Get customer information
             customer_info = dbman.get_customer(self.databasePath, item[0])
             #Get items that was ordered by customer
             order_items = dbman.get_orderItems(self.databasePath, item[0])
+
+            if item[8] == 'now':
+                if item[3] == 'delivery':
+                    #Send print to packer
+                    #Instantiate the printer first
+                    printer = Printer(self.printerParam['printerNear'])
+                    printer.printOrder_packer(item, customer_info, order_items, self.print_translation)
+
+                    printer = Printer(self.printerParam['printerNear'])
+                    printer.printDriver(customer_info, item)
+                    
+                    printer = Printer(self.printerParam['printerFar'])
+                    printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
+
+                    #set print status to yes in the data base
+                    dbman.setPrintedStatus(self.databasePath, item[0], 'yes')
+
+                if item[3] == 'pickup':
+                    printer = Printer(self.printerParam['printerNear'])
+                    printer.printOrder_packer(item, customer_info, order_items, self.print_translation)
+                    
+                    printer = Printer(self.printerParam['printerFar'])
+                    printer.printOrder_kitchen(item, customer_info, order_items, self.print_translation)
+                    #set print status to yes in the data base
+                    dbman.setPrintedStatus(self.databasePath, item[0], 'yes')        
 
             if item[3] == 'delivery':
                 execution_time = self.convert_delivery_datetime(item[4], item[5], 'start_time') 
@@ -428,35 +468,156 @@ class ManageOrder:
             
             #Connect to data base and extract customer info
             customer = dbman.get_customer(self.databasePath, orderno)
+
             #Get customer order execution data
             order_execution = dbman.get_order_execution(self.databasePath, orderno)
+            mobile_phone = customer[3]
+            
+            if order_execution[3] == 'delivery' and order_execution[7] == 'no': #no delay warning sent yet
+                #Delay date:
 
-            #Convert date and time to datetime objects for comparison
-            created_at = datetime.datetime.strptime(order_execution[6], "%Y-%m-%dT%H:%M:%S%z")
-            created_at = created_at.replace(tzinfo=None)
+                #Convert to datetime
+                created_at = self.created_at_to_datetime(order_execution[6])
+                start_delivery_time = self.convert_delivery_datetime(order_execution[4], order_execution[5], 'start_time')
+                end_delivery_time = self.convert_delivery_datetime(order_execution[4], order_execution[5], 'end_time')
+                
+                #set the expected time with delay taken into account
+                expected_delivery = end_delivery_time + datetime.timedelta(minutes = 30)
+                expected_delivery = expected_delivery.strftime('%H:%M')
 
-            if order_execution[3] == 'delivery':
-                order_complete_by = self.convert_delivery_datetime(order_execution[4], order_execution[5], 'end_time')
-                created_in_advance = order_complete_by - created_at
-                if created_in_advance < datetime.timedelta(minutes=60):
-                    #Then the first criteria for sending a delay if order is created less than 30 min before time start is fulfilled
-                    delay_candidate = True
+                #Evaluate how long in advance the order was created
+                created_in_advance = (start_delivery_time - created_at).total_seconds() /60 #minutes customer created the order in advance
+                
+                if created_in_advance <= 0: #Greedy delivery time, where created at time is in the delivery time frame
+                    #no hesistation. Send delay sms
+                    expected_delivery = end_delivery_time + datetime.timedelta(minutes = 30)
+                    expected_delivery.strftime('%Y-%m-%d %H:%M%S')
                     
-                    #Check how many orders there are in time frame
-                    #self.count_order_in_timeFrame(order_execution[4], order_execution[5], 'delivery')
+                    smstext = f'''Dear {customer[1]},
+                    
+Thanks for your order. We are currently very busy, and expect to deliver your order to you at around {expected_delivery}. Thanks for your understanding.
 
-            if order_execution[3] == 'pickup':
-                order_complete_by = self.convert_pickup_datetime(order_execution[4], order_execution[5])
-                created_in_advance = order_complete_by - created_at
-                if created_in_advance < datetime.timedelta(minutes=60):
-                    delay_candidate = True
+This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
             
-            now = datetime.datetime.now()
-            
-            #Check if delay warning is sent
-            #Count order in this date and time frame
-            #if order_execution[7] == 'no': #if delay warning hasn't been sent, evaluate the need for sending one
+                    
+Hidden Dimsum with Thanks!'''
 
+                    #send first dummy sms to myself to assure the sanity of the sms
+                    self.send_sms(smstext, '+4542788282') #change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    self.send_sms(smstext, mobile_phone)
+                    dbman.delay_warn(self.databasePath, orderno, 'yes')
+        
+                if created_in_advance > 0 and created_in_advance < 30:
+                    #Check how many other orders we have in the requested delivery time
+                    tmp_timedelta = (end_delivery_time - start_delivery_time) / 2
+                    midpoint = start_delivery_time + tmp_timedelta
+
+                    delay_date = order_execution[4]
+                    deliver_data, pickup_data = dbman.count_orders(self.databasePath, delay_date)
+
+                    #From the received order, count order amount in the same delivery time frame
+                    counter = 0
+                    for item in deliver_data:
+                        #For each delivery data, check if our midpoint is within the time-span
+                        existing_order_delivery_start = self.convert_delivery_datetime(item[4], item[5], 'start_time')    
+                        existing_order_delivery_end = self.convert_delivery_datetime(item[4], item[5], 'end_time')
+                        if midpoint >= existing_order_delivery_start and midpoint <= existing_order_delivery_end:
+                            counter += 1
+                    
+                    for item in pickup_data:
+                        #For each pickup data, check if our midpoint is within the time-span
+                        existing_order_pickup_time = self.convert_pickup_datetime(item[4], item[5])
+                        #If midpoint is larger than 30 min earlier than existing pickup time and smaller than existing pickup time
+                        #counter is increased by 1
+                        if midpoint >= existing_order_pickup_time - datetime.timedelta(minutes=30) and midpoint <= existing_order_pickup_time:
+                            counter += 1
+
+                    if counter > 4:
+                        expected_delivery = end_delivery_time + datetime.timedelta(minutes = 30)
+                        expected_delivery.strftime('%Y-%m-%d %H:%M%S')
+
+                        smstext = f'''Dear {customer[1]},
+                    
+Thanks for your order. We are currently very busy, and expect to deliver your order to you at around {expected_delivery}. Thanks for your understanding.
+
+This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
+            
+                    
+Hidden Dimsum with Thanks!'''
+
+                        self.send_sms(smstext, mobile_phone)
+                        self.send_sms(smstext, '+4542788282') #Change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        dbman.delay_warn(self.databasePath, orderno, 'yes')
+            
+            if order_execution[3] == 'pickup' and order_execution[7] == 'no': #no delay warning sent yet
+                #Delay date:
+
+                #Convert to datetime
+                created_at = self.created_at_to_datetime(order_execution[6])
+                pickup_time = self.convert_pickup_datetime(order_execution[4], order_execution[5])
+                
+                #set the expected time with delay taken into account
+                expected_pickup_time = pickup_time + datetime.timedelta(minutes = 30)
+                expected_pickup_time = expected_pickup_time.strftime('%H:%M')
+
+                #Evaluate how long in advance the order was created
+                created_in_advance = (pickup_time - created_at).total_seconds() /60 #minutes customer created the order in advance
+                
+                if created_in_advance <= 0: #Greedy pickup time, where created pickup time is after pickup. This logic should not be possible due to restrictions in the webpage
+                    #no hesistation. Send delay sms
+                    
+                    smstext = f'''Dear {customer[1]},
+                    
+Thanks for your order. We are currently very busy, and as a consequence there can be a delay in your pickup. Your pickup will be ready at {expected_pickup_time}. We will notify you, should it be ready for pickup earlier. Thanks for your understanding.
+
+This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
+            
+                    
+Hidden Dimsum with Thanks!'''
+
+                    #send first dummy sms to myself to assure the sanity of the sms
+                    self.send_sms(smstext, '+4542788282') #change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    self.send_sms(smstext, mobile_phone)
+                    dbman.delay_warn(self.databasePath, orderno, 'yes')
+        
+                if created_in_advance > 0 and created_in_advance < 30:
+                    #Check how many other orders we have in the requested time range
+
+                    delay_date = order_execution[4]
+                    deliver_data, pickup_data = dbman.count_orders(self.databasePath, delay_date)
+
+                    #From the received order, count order amount in the same delivery time frame
+                    counter = 0
+                    for item in deliver_data:
+                        #For each delivery data, check if our midpoint is within the time-span
+                        existing_order_delivery_start = self.convert_delivery_datetime(item[4], item[5], 'start_time')    
+                        existing_order_delivery_end = self.convert_delivery_datetime(item[4], item[5], 'end_time')
+                        if pickup_time >= existing_order_delivery_start and pickup_time <= existing_order_delivery_end:
+                            counter += 1
+                    
+                    for item in pickup_data:
+                        #For each pickup data, check if our midpoint is within the time-span
+                        existing_order_pickup_time = self.convert_pickup_datetime(item[4], item[5])
+                        #If midpoint is larger than 30 min earlier than existing pickup time and smaller than existing pickup time
+                        #counter is increased by 1
+                        if pickup_time >= existing_order_pickup_time - datetime.timedelta(minutes=30) and pickup_time <= existing_order_pickup_time:
+                            counter += 1
+
+                    if counter > 4:
+
+                        smstext = f'''Dear {customer[1]},
+                    
+Thanks for your order. We are currently very busy, and as a consequence there can be a delay in your pickup. Your pickup will be ready at {expected_pickup_time}. We will notify you, should it be ready for pickup earlier. Thanks for your understanding.
+
+This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
+            
+                    
+Hidden Dimsum with Thanks!'''
+
+                        self.send_sms(smstext, mobile_phone)
+                        self.send_sms(smstext, '+4542788282') #Change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        dbman.delay_warn(self.databasePath, orderno, 'yes')        
+             
     def count_order_in_timeFrame(self, date, timeframe, order_type):
         if order_type == 'delivery':
             #Query the data base of orders within same time frame
@@ -466,11 +627,6 @@ class ManageOrder:
             mystr = f'''SELECT ORDERNO FROM order_execution WHERE DATE = {date} AND TIME = {timeframe} '''
             c.execute(mystr)
             data = c.fetchall()
-            print(data)
-            pass
-        #print(date)
-        #print(timeframe)
-        #print(order_type)
         
     def logging(self, level, message):
         #Instantiate logging
@@ -492,6 +648,20 @@ class ManageOrder:
         
         if level == 'critical':
             logging.critical(message)
+
+    def send_sms(self, smstext, send_to):
+        '''
+        Send a delay sms with sms text to the number (send_to)
+        '''
+        #Prepare the phone number
+        #First remove empty white spaces in string 
+        send_to = send_to.replace(' ','')
+        if len(send_to) == 8:
+            send_to = f'+45{send_to}'
+
+        #Send SMS
+        client = Client(self.sms_cred['account_sid'], self.sms_cred['auth_token'])
+        message = client.messages.create(body= smstext, to= send_to, from_ = '+4592454888')
 
 #Upon start
 while True:

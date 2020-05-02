@@ -75,13 +75,31 @@ if order_type == 'delivery' and delay_warn == 'no':
         #Query the data base for all orders in the same date
         conn = sqlite3.Connection('orderDBDK.db')
         c = conn.cursor()
-        mystr = f'''SELECT * FROM order_execution WHERE ORDER_TYPE = 'delivery' AND DATE = '{delay_date}'  '''  
+        mystr = f'''SELECT * FROM order_execution WHERE ORDER_TYPE = 'delivery' AND DATE = '{delay_date}'  '''
+        c.execute(mystr)  
         deliver_data = c.fetchall()
 
         mystr = f'''SELECT * FROM order_execution WHERE ORDER_TYPE = 'pickup' AND DATE = '{delay_date}' '''
+        c.execute(mystr)
         pickup_data = c.fetchall()
         conn.close()
-        print('here is delivery data for delay_date')
-        print(deliver_data)      
-        print('here is pickup data for delay_date')
-        print(pickup_data)
+
+        #From the received order, count order amount in the same delivery time frame
+        counter = 0
+        for item in deliver_data:
+            #For each delivery data, check if our midpoint is within the time-span
+            existing_order_delivery_start = convert_delivery_datetime(item[4], item[5], 'start_time')    
+            existing_order_delivery_end = convert_delivery_datetime(item[4], item[5], 'end_time')
+            if midpoint >= existing_order_delivery_start and midpoint <= existing_order_delivery_end:
+                counter += 1
+        
+        for item in pickup_data:
+            #For each pickup data, check if our midpoint is within the time-span
+            existing_order_pickup_time = convert_pickup_datetime(item[4], item[5])
+            #If midpoint is larger than 30 min earlier than existing pickup time and smaller than existing pickup time
+            #counter is increased by 1
+            if midpoint >= existing_order_pickup_time - datetime.timedelta(minutes=30) and midpoint <= existing_order_pickup_time:
+                counter += 1
+
+        if counter > 4:
+            print('Ordered too late and too many orders in the que. Send a warning for delay')

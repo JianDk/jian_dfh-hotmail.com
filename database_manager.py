@@ -43,6 +43,35 @@ def createDB(path_db):
     conn.commit()
     conn.close()
 
+def count_orders(path_db, delay_date):
+    '''
+    Query the data base for all orders created at delay date. The return are both for delivery and pickup
+    '''
+    #Query the data base for all orders in the same date
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = f'''SELECT * FROM order_execution WHERE ORDER_TYPE = 'delivery' AND DATE = '{delay_date}'  '''
+    c.execute(mystr)  
+    deliver_data = c.fetchall()
+
+    mystr = f'''SELECT * FROM order_execution WHERE ORDER_TYPE = 'pickup' AND DATE = '{delay_date}' '''
+    c.execute(mystr)
+    pickup_data = c.fetchall()
+    conn.close()
+
+    return deliver_data, pickup_data
+
+def delay_warn(path_db, orderno, warning_status):
+    '''
+    Update DELAY_WARN to warning_status in the data base 
+    '''
+    conn = sqlite3.Connection(path_db)
+    c = conn.cursor()
+    mystr = '''UPDATE order_execution SET DELAY_WARN = ? WHERE ORDERNO = ?'''
+    c.execute(mystr, (warning_status, orderno))
+    conn.commit()
+    conn.close()
+
 def get_customer(path_db, orderno):
     '''returns all customer information from the customer table '''
     conn = sqlite3.Connection(path_db)
@@ -79,7 +108,7 @@ def get_printable_orderno(path_db):
     '''
     conn = sqlite3.Connection(path_db)
     c = conn.cursor()
-    mystr = '''SELECT * FROM order_execution WHERE PRINT_STATUS = 'no' '''
+    mystr = '''SELECT * FROM order_execution WHERE PRINT_STATUS = 'no' OR PRINT_STATUS = 'now' '''
     c.execute(mystr)
     printable_orderno = c.fetchall()
     conn.close()

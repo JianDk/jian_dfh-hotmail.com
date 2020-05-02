@@ -74,6 +74,26 @@ for mailid in mailid_from:
 
 connection.expunge()
 
+#Perform a filter to search for emails from HK mail account
+result, mailid_from = connection.search(None, f'(FROM "kontakt@dimsum.dk")')
+mailid_from = mailid_from[0].split()
+
+for mailid in mailid_from:
+    print(mailid)
+    #Get email data
+    result, data = connection.fetch(mailid, '(RFC822)')
+    msg = email.message_from_bytes(data[0][1])
+
+    #get subject title
+    msg_subject = msg['Subject']
+    print(msg_subject)
+    print(type(msg_subject))
+    
+    if '[Hidden Dimsum] Order #' in msg_subject:
+        connection.store(mailid, '+FLAGS', '\\Deleted')
+        print('Hidden Dimsum order email from HK deleted')
+
+connection.expunge()
 
 #Close the connection
 connection.close()
