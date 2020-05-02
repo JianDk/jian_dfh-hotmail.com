@@ -9,7 +9,7 @@
     "Crispy Chicken": "W6",
     "Cucumber Salad": "8",
     "Dimsum Menu": "DM (W8, mushroom, 11, 20, 2 x lucky Buddha)",
-    "Dimsum Feast Menu" : "DF (19, 10, 11, W6, 8, 30, W7, W8, choya, 2 x hyldebær)",
+    "Dimsum Feast Menu" : "DFM (19, 10, 11, 22, 8, 30, W7, W8, choya, 2 x hyldebær)",
     "Vegan Dimsum Menu" : "(23, 24, 17, W4, 2 x Tsingtao)",
     "Fried Rice": "30",
     "Gaozi Chicken": "19",
@@ -37,7 +37,7 @@
     "Veggie Fried Rice": "30 (veg)",
     "Veggie Mapo Tofu": "W3 (veg)",
     "Veggie Spring Rolls": "24",
-    "Wallnut Buns": "7",
+    "Walnut Buns": "7",
     "Wok Fried Lotus and Veggies": "Lotus wok",
     "Wok Fried Tofu": "W4",
     "Wok Green Beans": "W2"
