@@ -127,6 +127,12 @@ class Printer:
         escpos1.newline(2)
         #We will need a delay warning here
 
+        #Print a mark line to separate the reading between header and the actual orders
+        escpos1.align('center')
+        escpos1.charSize(2,2)
+        escpos1.text('-------')
+        escpos1.newline(2)
+
         #Print the items
         escpos1.charSize(2,2)
         for item in order_items:
@@ -140,6 +146,7 @@ class Printer:
                     escpos1.text(dish)
             else:
                 escpos1.text(dish + ' ' + 'X' + ' ' + str(item[1]))
+                escpos1.newline(2)
 
         escpos1.newline(3)
         escpos1.cut()

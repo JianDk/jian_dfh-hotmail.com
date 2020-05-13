@@ -503,7 +503,7 @@ This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
 Hidden Dimsum with Thanks!'''
 
                     #send first dummy sms to myself to assure the sanity of the sms
-                    self.send_sms(smstext, '+4542788282') #change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    self.send_sms(smstext, '+4560732838') #change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     self.send_sms(smstext, mobile_phone)
                     dbman.delay_warn(self.databasePath, orderno, 'yes')
         
@@ -546,7 +546,7 @@ This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
 Hidden Dimsum with Thanks!'''
 
                         self.send_sms(smstext, mobile_phone)
-                        self.send_sms(smstext, '+4542788282') #Change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        self.send_sms(smstext, '+4560732838') #Change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                         dbman.delay_warn(self.databasePath, orderno, 'yes')
             
             if order_execution[3] == 'pickup' and order_execution[7] == 'no': #no delay warning sent yet
@@ -576,7 +576,7 @@ This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
 Hidden Dimsum with Thanks!'''
 
                     #send first dummy sms to myself to assure the sanity of the sms
-                    self.send_sms(smstext, '+4542788282') #change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    self.send_sms(smstext, '+4560732838') #change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     self.send_sms(smstext, mobile_phone)
                     dbman.delay_warn(self.databasePath, orderno, 'yes')
         
@@ -615,7 +615,7 @@ This sms cannot be answered. For direct contact you can reach us at 33 12 88 28
 Hidden Dimsum with Thanks!'''
 
                         self.send_sms(smstext, mobile_phone)
-                        self.send_sms(smstext, '+4542788282') #Change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        self.send_sms(smstext, '+4560732838') #Change to mobile_phone!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                         dbman.delay_warn(self.databasePath, orderno, 'yes')        
              
     def count_order_in_timeFrame(self, date, timeframe, order_type):
@@ -664,6 +664,7 @@ Hidden Dimsum with Thanks!'''
         message = client.messages.create(body= smstext, to= send_to, from_ = '+4592454888')
 
 #Upon start
+
 while True:
     #Define which store to use
     store = 'DK'
