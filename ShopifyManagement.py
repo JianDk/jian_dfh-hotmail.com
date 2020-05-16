@@ -350,17 +350,20 @@ class ManageOrder:
             return status, orders
         
         if kwargs['orderType'] == 'closed':
+
             pay_load = {'test' : False,
             'limit' : 250,
             'status' : 'closed'}
             
             resp = requests.get(url = order_url, params = pay_load)
+            
             if resp.status_code != 200:
                 self.logging('debug', 'Failed to request closed orders')
                 status = False
                 orders = False
                 return status, orders
             orders = resp.json()['orders']
+            
             #Check for additional pages, if exists keep querying
             in_loop = True
             while in_loop:
@@ -381,7 +384,7 @@ class ManageOrder:
                     #Append the new orders into the existing ones from previous pages
                     for item in resp.json()['orders']:
                         orders.append(item)
-                
+                                        
                 else:
                     in_loop = False
                     status = True 
@@ -701,9 +704,9 @@ while True:
     status, amount = mohk.incomeStatus(switch = store) #get amount earning from this store at current month
     print(f'Amount for this month in {store} {amount} dkk')
     
-    #Check for existing orders for data base update - closed 
+    #Check for existing orders for data base update - closed
     status, orders = mohk.getOrders(orderType = 'closed')
-   
+    
     if status is True:
         mohk.insert_orders_to_database(orders)
 
