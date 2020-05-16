@@ -350,45 +350,68 @@ class ManageOrder:
             return status, orders
         
         if kwargs['orderType'] == 'closed':
-
             pay_load = {'test' : False,
             'limit' : 250,
             'status' : 'closed'}
             
             resp = requests.get(url = order_url, params = pay_load)
-            
             if resp.status_code != 200:
                 self.logging('debug', 'Failed to request closed orders')
                 status = False
                 orders = False
                 return status, orders
+
             orders = resp.json()['orders']
-            
             #Check for additional pages, if exists keep querying
-            in_loop = True
+            if 'rel="next"' in resp.headers['Link']:
+                in_loop = True
+                counter = 0
+
             while in_loop:
-                #If next page exists, retrieve it
-                if 'link' in resp.headers and 'rel="next' in resp.headers['link']:
-                    #Obtain the new link for next page
+                counter = counter +1
+                if counter == 1:
                     link = resp.headers['Link'].split('page_info=')
                     link = link[1].split('>;')[0]
                     next_page_order_url = order_url + '?page_info=' + link + '&limit=250'
                     resp = requests.get(url = next_page_order_url)
-                    
+
                     if resp.status_code != 200:
                         self.logging('debug', 'failed to retrieve closed orders in next page')
                         status = False
                         orders = False
                         return status, orders
                     
-                    #Append the new orders into the existing ones from previous pages
                     for item in resp.json()['orders']:
                         orders.append(item)
-                                        
-                else:
-                    in_loop = False
-                    status = True 
-                    return status, orders
+                    continue
+
+                if 'link' in resp.headers and 'rel="next"' in resp.headers['Link'] and \
+                    'rel="previous"' in resp.headers['Link']: #there is still valid next page
+                        nextpage = True
+
+                #If next page exists, retrieve it
+                if 'link' in resp.headers and \
+                    'rel="next"' not in resp.headers['Link'] and \
+                        'rel="previous"' in resp.headers['Link']: #Reached the end of pagination
+                        nextpage = False
+                        status = True
+                        return status, orders
+                
+                if nextpage is True:
+                    #Obtain the new link for next page
+                    link = resp.headers['Link'].split('rel="previous", <')[1].split('page_info=')[1].split('>; rel="next"')[0]
+                    
+                    next_page_order_url = order_url + '?page_info=' + link + '&limit=250'
+                    resp = requests.get(url = next_page_order_url)
+
+                    if resp.status_code != 200:
+                        self.logging('debug', 'failed to retrieve closed orders in next page')
+                        status = False
+                        orders = False
+                        return status, orders
+                    
+                    for item in resp.json()['orders']:
+                        orders.append(item)
     
     def insert_orders_to_database(self, orders):
         #Send to database_manager for order insertion
@@ -700,13 +723,14 @@ while True:
 
     #Define which store to use
     store = 'HK'
-    mohk = ManageOrder(switch = store) #Instantiate the store
+    mohk = ManageOrder(switch = store) #Instantiate the storeß
     status, amount = mohk.incomeStatus(switch = store) #get amount earning from this store at current month
     print(f'Amount for this month in {store} {amount} dkk')
     
     #Check for existing orders for data base update - closed
+
     status, orders = mohk.getOrders(orderType = 'closed')
-    
+
     if status is True:
         mohk.insert_orders_to_database(orders)
 
