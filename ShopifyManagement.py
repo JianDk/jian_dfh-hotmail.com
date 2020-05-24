@@ -320,7 +320,7 @@ class ManageOrder:
     def geo_plotter(self):
         GeoPlotter.GeoPlotter(home_latitude = 55.677063, 
         home_longitude = 12.573435, 
-        radius = 11000, 
+        radius = 7000, 
         dbpath = self.databasePath, 
         storename = self.store)
 
