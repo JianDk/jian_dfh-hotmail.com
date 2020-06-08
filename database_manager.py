@@ -277,14 +277,16 @@ def insert_orders_to_database(path_db, orders):
                 mystr = f'''SELECT GPS_LATITUDE, GPS_LONGITUDE FROM customer WHERE ORDERNO = {orderno}'''
                 location_data = c.execute(mystr)
                 location_data = location_data.fetchone()
-                if location_data[0] == 'None' or location_data[1] == 'None':        
-                    latitude, longitude = get_geoCoordinates(address)
-                    #Update back into datea base
-                    mystr = f'''UPDATE  customer SET GPS_LATITUDE = {latitude}, \
-                        GPS_LONGITUDE = {longitude} WHERE ORDERNO = {orderno}'''
 
-                    c.execute(mystr)
-                    conn.commit()
+                #As default we will use google's geo coding
+                latitude, longitude = get_geoCoordinates(address)
+                    
+                #Update back into datea base
+                mystr = f'''UPDATE  customer SET GPS_LATITUDE = {latitude}, \
+                    GPS_LONGITUDE = {longitude} WHERE ORDERNO = {orderno}'''
+
+                c.execute(mystr)
+                conn.commit()
             conn.close()
 
 def orderno_exists(path_db, orderno, tablename):
