@@ -354,7 +354,9 @@ class ManageOrder:
             'limit' : 250,
             'status' : 'closed'}
             
-            resp = requests.get(url = order_url, params = pay_load)
+            with requests.session() as session:
+                resp = session.get(url = order_url, params = pay_load)
+            
             if resp.status_code != 200:
                 self.logging('debug', 'Failed to request closed orders')
                 status = False
@@ -412,6 +414,15 @@ class ManageOrder:
                     
                     for item in resp.json()['orders']:
                         orders.append(item)
+    
+    def check_order_is_corrupt(self, orders):
+        '''
+        Loops through all the orders and filters out the corrupt order. The order no. is noted and owner receives a sms
+        warning. The corrupt order is then logged, so it will not be flagged again
+        '''
+        for item in orders:
+            if item['note_attributes'] is None:
+                print('corrupt order detected')
     
     def insert_orders_to_database(self, orders):
         #Send to database_manager for order insertion
@@ -498,7 +509,6 @@ class ManageOrder:
             #Get customer order execution data
             order_execution = dbman.get_order_execution(self.databasePath, orderno)
             mobile_phone = customer[3]
-            
             if order_execution[3] == 'delivery' and order_execution[7] == 'no': #no delay warning sent yet
                 #Delay date:
 
@@ -695,8 +705,6 @@ while True:
     #Define which store to use
     store = 'DK'
     mo = ManageOrder(switch = store) #Instantiate the store
-    status, amount = mo.incomeStatus(switch = store) #get amount earning from this store at current month
-    print(f'Amount for this month in {store} {amount} dkk')
     
     #Check for existing orders for data base update - closed 
     status, orders = mo.getOrders(orderType = 'closed')
@@ -724,8 +732,6 @@ while True:
     #Define which store to use
     store = 'HK'
     mohk = ManageOrder(switch = store) #Instantiate the storeß
-    status, amount = mohk.incomeStatus(switch = store) #get amount earning from this store at current month
-    print(f'Amount for this month in {store} {amount} dkk')
     
     #Check for existing orders for data base update - closed
 
@@ -751,5 +757,6 @@ while True:
 
     #Check for fulfillment
     mohk.fulfill_and_capture()
+    print('system working...')
     time.sleep(5)
 

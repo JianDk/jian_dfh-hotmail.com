@@ -1,7 +1,6 @@
 import folium
 
 m = folium.Map(location = [55.677063, 12.573435], zoom_start = 12) 
-
 folium.Marker(location = [55.677063, 12.573435], popup = 'Hidden Dimsum', icon = folium.Icon(color = 'black')).add_to(m)
 
 folium.Circle(
