@@ -66,7 +66,8 @@ class ManageOrder:
         
         #Get the payouts from HK for this month
         payout_url = self.shop_url  + "/shopify_payments/payouts.json"
-        resp = requests.get(url = payout_url)
+        with requests.session() as session:
+            resp = session.get(url = payout_url)
         if resp.status_code != 200:
             status = False
             amount = False
@@ -92,7 +93,8 @@ class ManageOrder:
 
         #Get the balance in the account that is not yet included in payouts
         balance_url = self.shop_url + "/shopify_payments/balance.json"
-        resp = requests.get(url = balance_url)
+        with requests.session() as session:
+            resp = session.get(url = balance_url)
         if resp.status_code != 200:
             self.logging('debug', 'Failed to retrieve the balance from ' + switch)
             status = False
@@ -146,7 +148,8 @@ class ManageOrder:
     def capture_transaction(self, order_id):
         #Retrieves a list of transactions associated with the order
         url_transaction = self.shop_url + f"/orders/{order_id}/transactions.json"
-        resp = requests.get(url = url_transaction)
+        with requests.session() as session:
+            resp = session.get(url = url_transaction)
         if resp.status_code != 200:
             self.logging('debug','Failed to retrieve order id ' + str(order_id) + ' for capture payment (url_transaction)')
             status = False
@@ -264,7 +267,8 @@ class ManageOrder:
         '''
         #Start by retrieving the specific order
         order_url = self.shop_url + f"/orders/{order_id}.json"
-        resp = requests.get(order_url)
+        with requests.session() as session:
+            resp = session.get(order_url)
         if resp.status_code != 200:
             self.logging('debug', 'Failed to retrieve order from fulfill_and_capture')
             status = False
@@ -278,7 +282,8 @@ class ManageOrder:
         for i in line_items:
             line_items_id.append({'id' : str(i['id'])})
             url_inventory_item_id = self.shop_url + f"/variants/{i['variant_id']}.json"
-            resp_inventory_ítem_id = requests.get(url = url_inventory_item_id)  
+            with requests.session() as session:
+                resp_inventory_ítem_id = session.get(url = url_inventory_item_id)  
 
             if resp_inventory_ítem_id.status_code != 200:
                 status = False
@@ -289,7 +294,8 @@ class ManageOrder:
             
             #Get the location id
             url_location_id = self.shop_url + f"/inventory_levels.json?inventory_item_ids={inventory_item_id}"
-            resp_location_id = requests.get(url = url_location_id)
+            with requests.session() as session:
+                resp_location_id = session.get(url = url_location_id)
 
             if resp_location_id.status_code != 200:
                 status = False
@@ -337,7 +343,8 @@ class ManageOrder:
             'status' : 'open',
             'limit' : 250} #Will not implement the look for next page, as usually there will never be more than 50 new orders a day
 
-            resp = requests.get(url = order_url, params = pay_load)
+            with requests.session() as session:
+                resp = session.get(url = order_url, params = pay_load)
 
             if resp.status_code != 200:
                 self.logging('debug', 'Failed to request for open orders from getOrders')
@@ -375,7 +382,8 @@ class ManageOrder:
                     link = resp.headers['Link'].split('page_info=')
                     link = link[1].split('>;')[0]
                     next_page_order_url = order_url + '?page_info=' + link + '&limit=250'
-                    resp = requests.get(url = next_page_order_url)
+                    with requests.session() as session:
+                        resp = session.get(url = next_page_order_url)
 
                     if resp.status_code != 200:
                         self.logging('debug', 'failed to retrieve closed orders in next page')
@@ -404,7 +412,8 @@ class ManageOrder:
                     link = resp.headers['Link'].split('rel="previous", <')[1].split('page_info=')[1].split('>; rel="next"')[0]
                     
                     next_page_order_url = order_url + '?page_info=' + link + '&limit=250'
-                    resp = requests.get(url = next_page_order_url)
+                    with requests.session() as session:
+                        resp = session.get(url = next_page_order_url)
 
                     if resp.status_code != 200:
                         self.logging('debug', 'failed to retrieve closed orders in next page')
