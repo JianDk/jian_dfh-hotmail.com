@@ -14,16 +14,22 @@ class ManageOrder:
     def __init__(self, **kwargs):
         self.API_VERSION = "2020-04"
 
+        #load shopify credientials
+        with open("shopifyCred.txt", 'r') as file:
+            shopifyCred = json.load(file)
+
         if kwargs['switch'] == 'DK':
-            self.API_KEY = "f7bf71f3f3b7ce0a6f75863bdfccf53e"
-            self.PASSWORD = "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"
+            dkCred = shopifyCred['DK']
+            self.API_KEY = dkCred["API_KEY"]
+            self.PASSWORD = dkCred['PASSWORD'] 
             self.shop_url = "https://%s:%s@jian-xiong-wu.myshopify.com/admin/api/%s" % (self.API_KEY, self.PASSWORD, self.API_VERSION)
             self.databasePath = 'orderDBDK.db'
             self.store = 'DK'
 
         if kwargs['switch'] == 'HK':
-            self.API_KEY = "11d1233bd98782e8967a340918334686"
-            self.PASSWORD = "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"
+            hkCred = shopifyCred['HK']
+            self.API_KEY = hkCred['API_KEY'] 
+            self.PASSWORD = hkCred['PASSWORD'] 
             self.shop_url = "https://%s:%s@alexanderystore.myshopify.com/admin/api/%s" % (self.API_KEY, self.PASSWORD, self.API_VERSION)
             self.databasePath = 'orderDBHK.db'
             self.store = 'HK'
@@ -39,7 +45,7 @@ class ManageOrder:
         self.printerParam['printerFar'] = {}
         self.printerParam['printerFar'] = {
             'connectionMethod' : 'network',
-            'host' : '192.168.1.50',
+            'host' : '192.168.1.85',
             'port' : 9100
         }
 
@@ -707,65 +713,15 @@ Hidden Dimsum with Thanks!'''
         #Send SMS
         client = Client(self.sms_cred['account_sid'], self.sms_cred['auth_token'])
         message = client.messages.create(body= smstext, to= send_to, from_ = '+4592454888')
-
-#Upon start
-
-while True:
-    #Define which store to use
-    store = 'DK'
-    mo = ManageOrder(switch = store) #Instantiate the store
     
-    #Check for existing orders for data base update - closed 
-    status, orders = mo.getOrders(orderType = 'closed')
-    if status is True:
-        mo.insert_orders_to_database(orders)
+    def stampTime(self):
+        #Everytime the while loop has run to an end a time stamp is created and stored locally in a json file
+        #Idea here is to use a watch dog to send out an alarm should a threshold time been passed and no time stamp
+        #has occured in the mean time
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        lastTimeStamp = {'time' : now}
+        lastTimeStamp['alarmStatus'] = False
 
-    #Check for new orders for data base update - open
-    status, orders = mo.getOrders(orderType = 'open')
-
-    if status is True:
-        mo.insert_orders_to_database(orders)
-
-        #Check for sending warning SMS
-        mo.sms_delayWarn(orders)
-    
-        #Print out new orders
-        mo.print_orders()
-
-        #Geoplotting
-        mo.geo_plotter()
-
-    #Check for fulfillment
-    mo.fulfill_and_capture()
-
-    #Define which store to use
-    store = 'HK'
-    mohk = ManageOrder(switch = store) #Instantiate the storeß
-    
-    #Check for existing orders for data base update - closed
-
-    status, orders = mohk.getOrders(orderType = 'closed')
-
-    if status is True:
-        mohk.insert_orders_to_database(orders)
-
-    #Check for new orders for data base update - open
-    status, orders = mohk.getOrders(orderType = 'open')
-
-    if status is True:
-        mohk.insert_orders_to_database(orders)
-
-        #Check for sending warning SMS
-        mohk.sms_delayWarn(orders)
-    
-        #Print out new orders
-        mohk.print_orders()
-
-        #Geoplotting
-        mohk.geo_plotter()
-
-    #Check for fulfillment
-    mohk.fulfill_and_capture()
-    print('system working...')
-    time.sleep(5)
+        with open('lastTimeStamp.txt', 'w') as outfile:
+            json.dump(lastTimeStamp, outfile)
 
