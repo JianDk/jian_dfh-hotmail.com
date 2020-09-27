@@ -45,7 +45,7 @@ class ManageOrder:
         self.printerParam['printerFar'] = {}
         self.printerParam['printerFar'] = {
             'connectionMethod' : 'network',
-            'host' : '192.168.1.85',
+        'host' : '192.168.1.92',
             'port' : 9100
         }
 
@@ -350,7 +350,12 @@ class ManageOrder:
             'limit' : 250} #Will not implement the look for next page, as usually there will never be more than 50 new orders a day
 
             with requests.session() as session:
-                resp = session.get(url = order_url, params = pay_load)
+                try:
+                    resp = session.get(url = order_url, params = pay_load)
+                except:
+                    status = False
+                    orders = False
+                    return status, orders
 
             if resp.status_code != 200:
                 self.logging('debug', 'Failed to request for open orders from getOrders')
@@ -368,7 +373,12 @@ class ManageOrder:
             'status' : 'closed'}
             
             with requests.session() as session:
-                resp = session.get(url = order_url, params = pay_load)
+                try:
+                    resp = session.get(url = order_url, params = pay_load)
+                except:
+                    status = False
+                    orders = False
+                    return status, orders
             
             if resp.status_code != 200:
                 self.logging('debug', 'Failed to request closed orders')
@@ -389,7 +399,12 @@ class ManageOrder:
                     link = link[1].split('>;')[0]
                     next_page_order_url = order_url + '?page_info=' + link + '&limit=250'
                     with requests.session() as session:
-                        resp = session.get(url = next_page_order_url)
+                        try:
+                            resp = session.get(url = next_page_order_url)
+                        except:
+                            status = False
+                            orders = False
+                            return status, orders
 
                     if resp.status_code != 200:
                         self.logging('debug', 'failed to retrieve closed orders in next page')
@@ -419,7 +434,12 @@ class ManageOrder:
                     
                     next_page_order_url = order_url + '?page_info=' + link + '&limit=250'
                     with requests.session() as session:
-                        resp = session.get(url = next_page_order_url)
+                        try:
+                            resp = session.get(url = next_page_order_url)
+                        except:
+                            status = False
+                            orders = False
+                            return status, orders
 
                     if resp.status_code != 200:
                         self.logging('debug', 'failed to retrieve closed orders in next page')
@@ -429,6 +449,9 @@ class ManageOrder:
                     
                     for item in resp.json()['orders']:
                         orders.append(item)
+
+        status = True
+        return status, orders
     
     def check_order_is_corrupt(self, orders):
         '''
